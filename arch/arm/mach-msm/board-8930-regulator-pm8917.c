@@ -663,7 +663,7 @@ msm8930_pm8917_regulator_pdata[] __devinitdata = {
 	PM8XXX_BOOST(BOOST, "8917_boost", 0,  5000000, 5000000, 500, NULL, 11),
 
 	/*	     ID        name      always_on pd en_t supply    reg_ID */
-#if defined(CONFIG_MACH_MELIUS) || defined(CONFIG_MACH_SERRANO) || defined(CONFIG_MACH_CRATER) || defined (CONFIG_MACH_BAFFIN) || defined (CONFIG_MACH_CANE) || defined (CONFIG_MACH_GOLDEN) || defined (CONFIG_MACH_LT02) || defined (CONFIG_MACH_BISCOTTO)
+#if defined(CONFIG_MACH_MELIUS) || defined(CONFIG_MACH_SERRANO) || defined(CONFIG_MACH_CRATER) || defined (CONFIG_MACH_BAFFIN) || defined (CONFIG_MACH_CANE) || defined (CONFIG_MACH_GOLDEN) || defined (CONFIG_MACH_LT02) || defined (CONFIG_MACH_BISCOTTO)  || defined(CONFIG_MACH_LOGANRE)
 	PM8XXX_VS300(USB_OTG,  "8921_usb_otg",  0, 0, 0,   "8917_boost", 12),
 #else
 	PM8XXX_VS300(USB_OTG,  "8921_usb_otg",  0, 1, 0,   "8917_boost", 12),

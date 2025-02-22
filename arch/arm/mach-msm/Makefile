@@ -278,11 +278,16 @@ obj-$(CONFIG_MACH_MSM8930_EVT) += board-8930-all.o board-8930-regulator-pm8038.o
 obj-$(CONFIG_MACH_MELIUS) += board-melius.o board-melius-battery.o board-s5000-tsp_msm8930.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-melius-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_CANE) += board-cane.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-cane-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_SERRANO) += board-serrano.o board-8930-camera.o board-8930-camera-power.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-serrano-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey-serrano.o
+obj-$(CONFIG_MACH_LOGANRE) += board-loganre.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-loganre-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_GOLDEN) += board-golden.o board-8930-camera.o board-8930-camera-power.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-golden-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o  board-8930-input-tkey.o
 obj-$(CONFIG_MACH_LT02) += board-lt02.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-lt02-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o  board-8930-input-zinitix.o board-lt02-battery.o
 ifdef CONFIG_MACH_SERRANO
 obj-$(CONFIG_CHARGER_MAX77XXX) += board-serrano-battery.o
 obj-$(CONFIG_PM8921_BMS) += bms-batterydata-serrano.o
+endif
+ifdef CONFIG_MACH_LOGANRE
+	obj-$(CONFIG_CHARGER_MAX77XXX) += board-loganre-battery.o	obj-$(CONFIG_CHARGER_MAX77XXX) += board-loganre-battery.o
+	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-loganre.o	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-loganre.o
 endif
 ifdef CONFIG_MACH_GOLDEN
 obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
