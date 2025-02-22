@@ -123,7 +123,6 @@ obj-$(CONFIG_VLYNQ)		+= vlynq/
 obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 obj-y				+= ieee802154/
-obj-$(CONFIG_FM_RADIO)   += samsung/
 #common clk code
 obj-y				+= clk/
 
@@ -143,16 +142,22 @@ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
 obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
 
 obj-$(CONFIG_CORESIGHT)		+= coresight/
+obj-$(CONFIG_ESOC)		+= esoc/
 
-obj-$(CONFIG_VIBETONZ)		+= motor/
-obj-$(CONFIG_MSM_VIBRATOR) += motor/
-obj-$(CONFIG_BATTERY_SAMSUNG)	+= battery/
-obj-$(CONFIG_INPUT_YAS_SENSORS)		+= sensors/
-obj-$(CONFIG_SENSORS_SSP)		+= sensorhub/
-obj-$(CONFIG_SENSORS_ALPS)		+= sensors_alps/
-obj-$(CONFIG_SEC_FPGA)	+= barcode_emul/
-obj-$(CONFIG_ULTRASONIC_SENSOR)	+= ultrasonic/
-
-ifeq (1, $(shell if [ -d ../../../../../../kernel/drivers/exfat ] ; then echo 1 ; fi))
-obj-y                           += exfat/
+obj-$(CONFIG_SENSORS_CORE)	+= sensors/
+ifdef CONFIG_MACH_SERRANO
+obj-$(CONFIG_MSM_VIBRATOR)	+= motor/
 endif
+ifdef CONFIG_MACH_GOLDEN
+obj-$(CONFIG_MSM_VIBRATOR)	+= motor/
+endif
+ifdef CONFIG_MACH_CANE
+obj-$(CONFIG_MSM_VIBRATOR)	+= motor/
+endif
+obj-$(CONFIG_BATTERY_SAMSUNG)	+= battery/
+ifdef CONFIG_MACH_MELIUS
+obj-$(CONFIG_VIBETONZ)		+= motor/
+endif
+obj-$(CONFIG_SEC_FPGA)		+= barcode_emul/
+obj-$(CONFIG_IRDA_MC96)		+= irda/
+obj-$(CONFIG_FM_RADIO)		+= samsung/

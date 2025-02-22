@@ -27,11 +27,7 @@ static struct dsi_buf hx8389b_rx_buf;
 
 #if defined(CONFIG_BACKLIGHT_IC_KTD3102)
 spinlock_t bl_ctrl_lock;
-#ifdef KEEP_BRIGHTNESS_ON_FIRST_BOOT
-static int lcd_brightness = KEEP_BRIGHTNESS_ON_FIRST_BOOT;
-#else
 static int lcd_brightness = -1;
-#endif
 #endif
 
 struct mutex dsi_tx_mutex;

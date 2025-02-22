@@ -62,8 +62,6 @@ struct mmc_ios {
 #define MMC_TIMING_UHS_DDR50	5
 #define MMC_TIMING_MMC_HS200	6
 
-	unsigned char	ddr;			/* dual data rate used */
-
 #define MMC_SDR_MODE		0
 #define MMC_1_2V_DDR_MODE	1
 #define MMC_1_8V_DDR_MODE	2
@@ -162,6 +160,22 @@ struct mmc_async_req {
 	 * Returns 0 if success otherwise non zero.
 	 */
 	int (*err_check) (struct mmc_card *, struct mmc_async_req *);
+};
+
+/**
+ * mmc_context_info - synchronization details for mmc context
+ * @is_done_rcv		wake up reason was done request
+ * @is_new_req		wake up reason was new request
+ * @is_waiting_last_req	mmc context waiting for single running request
+ * @wait		wait queue
+ * @lock		lock to protect data fields
+ */
+struct mmc_context_info {
+	bool			is_done_rcv;
+	bool			is_new_req;
+	bool			is_waiting_last_req;
+	wait_queue_head_t	wait;
+	spinlock_t		lock;
 };
 
 struct mmc_hotplug {
@@ -337,6 +351,7 @@ struct mmc_host {
 	struct dentry		*debugfs_root;
 
 	struct mmc_async_req	*areq;		/* active async req */
+	struct mmc_context_info	context_info;	/* async synchronization info */
 
 #ifdef CONFIG_FAIL_MMC_REQUEST
 	struct fault_attr	fail_mmc_request;
@@ -364,7 +379,6 @@ struct mmc_host {
 	} perf;
 	bool perf_enable;
 #endif
-
 	struct mmc_ios saved_ios;
 	struct {
 		unsigned long	busy_time_us;
@@ -468,9 +482,6 @@ int mmc_card_awake(struct mmc_host *host);
 int mmc_card_sleep(struct mmc_host *host);
 int mmc_card_can_sleep(struct mmc_host *host);
 
-int mmc_host_enable(struct mmc_host *host);
-int mmc_host_disable(struct mmc_host *host);
-int mmc_host_lazy_disable(struct mmc_host *host);
 int mmc_pm_notify(struct notifier_block *notify_block, unsigned long, void *);
 
 /* Module parameter */

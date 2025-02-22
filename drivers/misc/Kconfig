@@ -395,7 +395,7 @@ config SAMSUNG_JACK_GNDLDET
 	  The gnd gpio is added for the detection of earjack.
 	  This is added to decide the earjack properly
 	  in case of the insertion of water.
-	  
+
 config SAMSUNG_JACK_EXT_LDO
 	bool "Control for External LDO in Samsung Earjack device"
 	depends on INPUT
@@ -421,6 +421,7 @@ config 2MIC_ES305
 
 	   To compile this driver as a module, choose M here: the
 	   module will be called a2220. If unsure, say N here.
+
 config HMC6352
 	tristate "Honeywell HMC6352 compass"
 	depends on I2C
@@ -539,14 +540,6 @@ config PCH_PHUB
 	  To compile this driver as a module, choose M here: the module will
 	  be called pch_phub.
 
-config SEC_MISC
-	bool "Samsung P series miscellaneous driver"
-	default n
-	---help---
-	  Samsung P series miscellaneous driver
-	  Additional debug features added.
-	  Mechanism to change debug level at run time over adb.
-	  This feature can be enabled in defconfig
 config USB_SWITCH_FSA9480
 	tristate "FSA9480 USB Switch"
 	depends on I2C
@@ -566,13 +559,13 @@ config USB_SWITCH_FSA9485
 	  a common connector port.
 
 config USB_SWITCH_TSU6721
-	tristate "TSU6721 USB Switch"
-	depends on I2C
-	help
-	  The TSU6721 is a USB port accessory detector and switch.
-	  The TSU6721 is fully controlled using I2C and enables USB data,
-	  stereo and mono audio, video, microphone and UART data to use
-	  a common connector port.
+        tristate "TSU6721 USB Switch"
+        depends on I2C
+        help
+          The TSU6721 is a USB port accessory detector and switch.
+          The TSU6721 is fully controlled using I2C and enables USB data,
+          stereo and mono audio, video, microphone and UART data to use
+          a common connector port.
 
 config MAX8997_MUIC
 	tristate "MAX8997 MUIC Support"
@@ -725,24 +718,6 @@ config QFP_FUSE
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
 
-config NFC_PN544
-        bool "NXP PN544 NFC Controller Driver"
-        default n
-        help
-          NXP PN544 Near Field Communication controller support.
-          This option enables device driver support for the NFC.
-          It is used by many services. NFC is fully controlled using I2C
-          to communicate the AP chip.
-
-config NFC_PN547
-        bool "NXP PN547 NFC Controller Driver"
-        default n
-        help
-          NXP PN547 Near Field Communication controller support.
-          This option enables device driver support for the NFC.
-          It is used by many services. NFC is fully controlled using I2C
-          to communicate the AP chip.
-
 config USB_HSIC_SMSC_HUB
 	tristate "Support for HSIC based MSM on-chip SMSC3503 HUB"
 	depends on USB_EHCI_MSM_HSIC
@@ -777,30 +752,18 @@ config BCM2079X_NFC_I2C
 	  To compile this driver as a module, choose m here. The module will
 	  be called bcm2079x-i2c.
 
-config NFC_PMIC_CLK
-        bool "Enable PMIC-CLK for NFC"
-        default n
-        help
-          Enable PMIC-CLK for NFC.
-
-config LM48560_RCV
-	bool "LM48560 RCV Support"
-	depends on I2C
-	help
-	  If you say yes here you get support for the RCV device of TI M48560.
-
-config ADC_STMPE811
-	tristate "ADC stmpe811 driver"
+config VP_A2220
+	tristate "VP driver"
 	default n
-	depends on I2C
 	help
-	  This option enables ADC checking driver. stmpe811.
+	  This option enables voice processing audience chip.Please enable this chip
+	  if you want to enable voice processing during call.
 
 config CHG_INCOMPATIBLE
-	tristate "support incompatible charger"
-	default n
-	help
-	  this option enable support for incompatible charger
+        tristate "support incompatible charger"
+        default n
+        help
+          this option enable support for incompatible charger
 
 config NFC_PN544
         bool "NXP PN544 NFC Controller Driver"
@@ -830,28 +793,6 @@ config DESKDOCK_DISABLE
 	help
 	  This option enable not support for DESKDOCK
 
-config GENERIC_BLN
-	bool "Generic BLN support for backlight notification"
-	depends on SYSFS && EXPERIMENTAL
-	default n
-	help
-	  Say Y here to enable the backlight notification
-	  for Android LED-notification (modified liblight needed)
-
-config GENERIC_BLN_EMULATE_BUTTONS_LED
-	bool "Emulate buttons led"
-	depends on GENERIC_BLN
-	default n
-	help
-	  Say Y here to simulate buttons LED
-
-config GENERIC_BLN_USE_WAKELOCK
-	bool "Use a kernel wakelock to retain the LEDs enabled in suspend"
-	depends on GENERIC_BLN
-	default n
-	help
-	  Say Y here use the wakelock implementation of the BLN driver
-
 config UID_CPUTIME
 	tristate "Per-UID cpu time statistics"
 	depends on PROFILING
@@ -867,6 +808,5 @@ source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/carma/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/slimport_anx7808/Kconfig"
-source "drivers/misc/modem_if/Kconfig"
 
 endmenu

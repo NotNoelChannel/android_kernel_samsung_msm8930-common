@@ -215,6 +215,7 @@ static int msm_camera_v4l2_reqbufs(struct file *f, void *pctx,
 		pmctl = msm_cam_server_get_mctl(pcam->mctl_handle);
 		if (pmctl == NULL) {
 			pr_err("%s Invalid mctl ptr", __func__);
+			mutex_unlock(&pcam_inst->inst_lock);
 			return -EINVAL;
 		}
 		pmctl->mctl_vbqueue_init(pcam_inst, &pcam_inst->vid_bufq,
@@ -362,7 +363,11 @@ static int msm_camera_v4l2_dqbuf(struct file *f, void *pctx,
 		return -EACCES;
 	}
 	rc = vb2_dqbuf(&pcam_inst->vid_bufq, pb,  f->f_flags & O_NONBLOCK);
-	D("%s, videobuf_dqbuf returns %d\n", __func__, rc);
+	if (rc < 0) {
+		pr_err("%s, videobuf_dqbuf returns %d\n", __func__, rc);
+		mutex_unlock(&pcam_inst->inst_lock);
+		return rc;
+	}
 
 	if (pb->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		/* Reject the buffer if planes array was not allocated */
@@ -761,7 +766,7 @@ static int msm_camera_v4l2_subscribe_event(struct v4l2_fh *fh,
 		return -EINVAL;
 	if (sub->type == V4L2_EVENT_ALL)
 		sub->type = V4L2_EVENT_PRIVATE_START+MSM_CAM_APP_NOTIFY_EVENT;
-	rc = v4l2_event_subscribe(fh, sub, 70);
+	rc = v4l2_event_subscribe(fh, sub, 100);
 	if (rc < 0)
 		D("%s: failed for evtType = 0x%x, rc = %d\n",
 						__func__, sub->type, rc);
@@ -984,7 +989,6 @@ static int msm_open(struct file *f)
 		msm_queue_init(&pcam->eventData_q, "eventData");
 	}
 	pcam_inst->vbqueue_initialized = 0;
-	pcam_inst->sequence = 0;
 	rc = 0;
 
 	f->private_data = &pcam_inst->eventHandle;
@@ -1247,10 +1251,6 @@ long msm_v4l2_evt_notify(struct msm_cam_media_controller *mctl,
 	v4l2_ev = evt_payload.evt;
 	v4l2_ev.id = 0;
 	pcam = mctl->pcam_ptr;
-	if(!pcam) {
-		pr_err("%s: pcam is NULL\n", __func__);
-		return -EINVAL;
-	}
 	ktime_get_ts(&v4l2_ev.timestamp);
 	if (evt_payload.payload_length > 0 && evt_payload.payload != NULL) {
 		mutex_lock(&pcam->event_lock);
@@ -1285,6 +1285,7 @@ copy_from_user_failed:
 payload_alloc_fail:
 	kfree(event_qcmd);
 event_qcmd_alloc_fail:
+	mutex_unlock(&pcam->event_lock);
 	return rc;
 }
 
@@ -1427,7 +1428,7 @@ probe_fail:
 }
 #endif
 
-#if !(defined(CONFIG_MACH_GOLDEN) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_SPR))
+#if !(defined(CONFIG_MACH_GOLDEN) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_TMO) || defined(CONFIG_MACH_CANE))
 static struct v4l2_subdev *msm_eeprom_probe(
 	struct msm_eeprom_info *eeprom_info)
 {
@@ -1454,19 +1455,19 @@ static struct v4l2_subdev *msm_eeprom_probe(
 
 	adapter = i2c_get_adapter(eeprom_info->bus_id);
 	if (!adapter){
-            D("[%s::adapter] fail!!\n", __func__);        
+            D("[%s::adapter] fail!!\n", __func__);
             goto probe_fail;
        }
 
 	eeprom_client = i2c_new_device(adapter, eeprom_info->board_info);
 	if (!eeprom_client){
-            D("[%s::adapter] fail!!\n", __func__);        
+            D("[%s::adapter] fail!!\n", __func__);
             goto device_fail;
        }
 
 	eeprom_sdev = (struct v4l2_subdev *)i2c_get_clientdata(eeprom_client);
 	if (eeprom_sdev == NULL){
-            D("[%s::adapter] fail!!\n", __func__);        
+            D("[%s::adapter] fail!!\n", __func__);
             goto client_fail;
        }
 
@@ -1512,7 +1513,7 @@ int msm_sensor_register(struct v4l2_subdev *sensor_sd)
 #ifdef CONFIG_MSM_ACTUATOR
 	pcam->act_sdev = msm_actuator_probe(sdata->actuator_info);
 #endif
-#if !(defined(CONFIG_MACH_GOLDEN) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_SPR))
+#if !(defined(CONFIG_MACH_GOLDEN) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_TMO) || defined(CONFIG_MACH_CANE))
 	pcam->eeprom_sdev = msm_eeprom_probe(sdata->eeprom_info);
 #endif
 

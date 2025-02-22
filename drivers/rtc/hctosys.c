@@ -47,16 +47,6 @@ int rtc_hctosys(void)
 
 	}
 
-	/*
-	 * Force update rtc year time to 2013 to avoid daylight time setting
-	 * problem. If the tm_year is less than 1986, daylight timezone will be
-	 * displayed to "standard time zone". More accurate xtime will be
-	 * updated by the time_daemon after loading from the platform side.
-	 * FYI tm_year should specify a production year. // SS concept
-	 */
-	if (tm.tm_year <= 86)
-		tm.tm_year = 113;
-
 	err = rtc_valid_tm(&tm);
 	if (err) {
 		dev_err(rtc->dev.parent,

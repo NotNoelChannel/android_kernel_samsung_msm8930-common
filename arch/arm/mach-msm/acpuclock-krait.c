@@ -44,12 +44,6 @@
 #define PRI_SRC_SEL_HFPLL	1
 #define PRI_SRC_SEL_HFPLL_DIV2	2
 
-#ifdef CONFIG_SEC_DEBUG_SUBSYS
-int boost_uv;
-int speed_bin;
-int pvs_bin;
-#endif
-
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
@@ -92,6 +86,7 @@ static void __cpuinit set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
 	regval &= ~(0x3 << 2);
 	regval |= ((sec_src_sel & 0x3) << 2);
 	set_l2_indirect_reg(sc->l2cpmr_iaddr, regval);
+
 	/* Wait for switch to complete. */
 	mb();
 	udelay(1);
@@ -428,11 +423,7 @@ module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
 
 static int calculate_vdd_core(const struct acpu_level *tgt)
 {
-#if defined(CONFIG_MACH_MELIUS_SKT)||defined(CONFIG_MACH_MELIUS_LGT)||defined(CONFIG_MACH_MELIUS_KTT)
-	return tgt->vdd_core + drv.boost_uv ;
-#else
 	return tgt->vdd_core + (enable_boost ? drv.boost_uv : 0);
-#endif
 }
 
 static DEFINE_MUTEX(l2_regulator_lock);
@@ -603,7 +594,6 @@ static struct acpuclk_data acpuclk_krait_data = {
 	.set_rate = acpuclk_krait_set_rate,
 	.get_rate = acpuclk_krait_get_rate,
 };
-uint32_t global_pvs; /*  This code is temporary code */
 
 /* Initialize a HFPLL at a given rate and enable it. */
 static void __cpuinit hfpll_init(struct scalable *sc,
@@ -1088,8 +1078,7 @@ static struct pvs_table * __init select_freq_plan(u32 pte_efuse_phys,
 	/* Select frequency tables. */
 	bin_idx = get_speed_bin(pte_efuse_val);
 	tbl_idx = get_pvs_bin(pte_efuse_val);
-		/*  This code is temporary */
-		global_pvs = tbl_idx;
+
 	return &pvs_tables[bin_idx][tbl_idx];
 }
 

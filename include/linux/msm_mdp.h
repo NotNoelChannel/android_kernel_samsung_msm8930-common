@@ -529,7 +529,6 @@ enum {
 	mdp_op_qseed_cfg,
 	mdp_bl_scale_cfg,
 	mdp_op_calib_cfg,
-	mdp_notify_kill,
 	mdp_op_pa_cfg,
 	mdp_op_max,
 };
@@ -575,7 +574,6 @@ struct mdp_buf_sync {
 	uint32_t acq_fen_fd_cnt;
 	int *acq_fen_fd;
 	int *rel_fen_fd;
-	int *retire_fen_fd;
 };
 
 struct mdp_buf_fence {

@@ -356,6 +356,7 @@ static int get_args(uint32_t kernel, uint32_t sc, remote_arg_t *pra,
 	args = (void *)((char *)pbuf->virt + used);
 	rlen = pbuf->size - used;
 	for (i = 0; i < inbufs + outbufs; ++i) {
+		int num;
 
 		rpra[i].buf.len = pra[i].buf.len;
 		if (!rpra[i].buf.len)
@@ -382,12 +383,18 @@ static int get_args(uint32_t kernel, uint32_t sc, remote_arg_t *pra,
 			args = pbuf->virt;
 			rlen = pbuf->size;
 		}
-		list[i].num = 1;
-		pages[list[i].pgidx].addr =
-			buf_page_start((void *)(pbuf->phys +
-						 (pbuf->size - rlen)));
-		pages[list[i].pgidx].size =
-			buf_page_size(pra[i].buf.len);
+		num = buf_num_pages(args, pra[i].buf.len);
+		if (pbuf == ibuf) {
+			list[i].num = num;
+			list[i].pgidx = 0;
+		} else {
+			list[i].num = 1;
+			pages[list[i].pgidx].addr =
+				buf_page_start((void *)(pbuf->phys +
+							 (pbuf->size - rlen)));
+			pages[list[i].pgidx].size =
+				buf_page_size(pra[i].buf.len);
+		}
 		if (i < inbufs) {
 			if (!kernel) {
 				VERIFY(err, 0 == copy_from_user(args,
@@ -665,7 +672,7 @@ static int fastrpc_internal_invoke(struct fastrpc_apps *me, uint32_t kernel,
 	remote_arg_t *rpra = 0;
 	struct fastrpc_device *dev = 0;
 	struct smq_invoke_ctx *ctx = 0;
-	struct fastrpc_buf obuf = {0}, *abufs = 0, *b;
+	struct fastrpc_buf obuf, *abufs = 0, *b;
 	int interrupted = 0;
 	uint32_t sc;
 	int i, nbufs = 0, err = 0;

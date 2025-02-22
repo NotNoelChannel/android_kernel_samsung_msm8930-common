@@ -40,42 +40,36 @@ import subprocess
 # force LANG to be set to en_US.UTF-8 to get consistent warnings.
 
 allowed_warnings = set([
-    "alignment.c:327",
-    "mmu.c:602",
-    "return_address.c:62",
-    "swab.h:49",
-    "SemaLambda.cpp:946",
-    "CGObjCGNU.cpp:1414",
-    "BugReporter.h:146",
-    "RegionStore.cpp:1904",
-    "SymbolManager.cpp:484",
-    "RewriteObjCFoundationAPI.cpp:737",
-    "RewriteObjCFoundationAPI.cpp:696",
-    "CommentParser.cpp:394",
-    "CommentParser.cpp:391",
-    "CommentParser.cpp:356",
-    "LegalizeDAG.cpp:3646",
-    "IRBuilder.h:844",
-    "DataLayout.cpp:193",
-    "transport.c:653",
-    "xt_socket.c:307",
-    "xt_socket.c:161",
-    "inet_hashtables.h:356",
-    "xc4000.c:1049",
-    "xc4000.c:1063",	
-    "f_qdss.c:586",
-    "mipi_tc358764_dsi2lvds.c:746",
-    "dynamic_debug.h:75",
-    "f_qdss.c:740",
-    "mipi_novatek.c:569",
-    "swab.h:34",
-    "svcauth_unix.c:531",
-    "cache.h:260",
-    "cpufreq_intelliactive.c:832",
-    "cpufreq_intelliactive.c:875",
-    "mdp4_video_enhance.c:172",
-    "keystore.c:1168",
-    "cache.h:276",
+   "alignment.c:327",
+   "mmu.c:602",
+   "return_address.c:62",
+   "swab.h:49",
+   "SemaLambda.cpp:946",
+   "CGObjCGNU.cpp:1414",
+   "BugReporter.h:146",
+   "RegionStore.cpp:1904",
+   "SymbolManager.cpp:484",
+   "RewriteObjCFoundationAPI.cpp:737",
+   "RewriteObjCFoundationAPI.cpp:696",
+   "CommentParser.cpp:394",
+   "CommentParser.cpp:391",
+   "CommentParser.cpp:356",
+   "LegalizeDAG.cpp:3646",
+   "IRBuilder.h:844",
+   "DataLayout.cpp:193",
+   "transport.c:653",
+   "xt_socket.c:307",
+   "xt_socket.c:161",
+   "inet_hashtables.h:356",
+   "xc4000.c:1049",
+   "xc4000.c:1063",	
+   "f_qdss.c:586",
+   "mipi_tc358764_dsi2lvds.c:746",
+   "dynamic_debug.h:75",
+   "hci_conn.c:407",
+   "f_qdss.c:740",
+   "mipi_novatek.c:569",
+   "swab.h:34",
  ])
 
 # Capture the name of the object file, can find it.
@@ -87,7 +81,7 @@ def interpret_warning(line):
     line = line.rstrip('\n')
     m = warning_re.match(line)
     if m and m.group(2) not in allowed_warnings:
-        print "error, forbidden warning:", m.group(2)
+        print >> sys.stderr, "error, forbidden warning:", m.group(2)
 
         # If there is a warning, remove any object if it exists.
         if ofile:
@@ -112,17 +106,17 @@ def run_gcc():
     try:
         proc = subprocess.Popen(args, stderr=subprocess.PIPE)
         for line in proc.stderr:
-            print line,
+            print >> sys.stderr, line,
             interpret_warning(line)
 
         result = proc.wait()
     except OSError as e:
         result = e.errno
         if result == errno.ENOENT:
-            print args[0] + ':',e.strerror
-            print 'Is your PATH set correctly?'
+            print >> sys.stderr, args[0] + ':',e.strerror
+            print >> sys.stderr, 'Is your PATH set correctly?'
         else:
-            print ' '.join(args), str(e)
+            print >> sys.stderr, ' '.join(args), str(e)
 
     return result
 

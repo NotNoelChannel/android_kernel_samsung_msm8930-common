@@ -469,7 +469,7 @@ static void mdm_update_gpio_configs(struct mdm_device *mdev,
 static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 				unsigned long arg)
 {
-	int status, ret = 0, gpio_status;
+	int status, ret = 0;
 	struct mdm_device *mdev = filp->private_data;
 	struct mdm_modem_drv *mdm_drv;
 	struct mdm_device *l_mdev;
@@ -490,14 +490,10 @@ static long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 		mdm_ops->power_on_mdm_cb(mdm_drv);
 		break;
 	case CHECK_FOR_BOOT:
-		gpio_status = gpio_get_value(mdm_drv->mdm2ap_status_gpio);
-		if (gpio_status == 0)
+		if (gpio_get_value(mdm_drv->mdm2ap_status_gpio) == 0)
 			put_user(1, (unsigned long __user *) arg);
 		else
 			put_user(0, (unsigned long __user *) arg);
-		pr_info("%s: mdm2ap_gpio_status for mdm id %d is %s\n",
-				__func__, mdev->mdm_data.device_id,
-				(gpio_status ? "High" : "Low"));
 		break;
 	case NORMAL_BOOT_DONE:
 		pr_debug("%s: check if mdm id %d is booted up\n",
@@ -722,10 +718,7 @@ static irqreturn_t mdm_status_change(int irq, void *dev_id)
 
 	pr_debug("%s: mdm id %d sent status change interrupt\n",
 			 __func__, mdev->mdm_data.device_id);
-	if (!atomic_read(&mdm_drv->mdm_ready))
-		return IRQ_HANDLED;
-
-	if (value == 0) {
+	if (value == 0 && atomic_read(&mdm_drv->mdm_ready)) {
 		pr_info("%s: unexpected reset external modem id %d\n",
 				__func__, mdev->mdm_data.device_id);
 		mdm_drv->mdm_unexpected_reset_occurred = 1;
@@ -1293,6 +1286,11 @@ static struct platform_driver mdm_modem_driver = {
 static int __init mdm_modem_init(void)
 {
 	int ret;
+
+#ifdef CONFIG_SAMSUNG_LPM_MODE
+	if (poweroff_charging)
+		return 0;
+#endif
 
 	ret = mdm_get_ops(&mdm_ops);
 	if (ret)

@@ -47,7 +47,6 @@ struct snd_msm {
 #define CAPTURE_MAX_NUM_PERIODS  16
 #define CAPTURE_MAX_PERIOD_SIZE  4096
 #define CAPTURE_MIN_PERIOD_SIZE  320
-
 static struct snd_pcm_hardware msm_pcm_hardware_capture = {
 	.info =                 (SNDRV_PCM_INFO_MMAP |
 				SNDRV_PCM_INFO_BLOCK_TRANSFER |
@@ -81,7 +80,8 @@ static struct snd_pcm_hardware msm_pcm_hardware_playback = {
 	.rate_max =             48000,
 	.channels_min =         1,
 	.channels_max =         2,
-	.buffer_bytes_max =     PLAYBACK_MAX_NUM_PERIODS * PLAYBACK_MAX_PERIOD_SIZE,
+	.buffer_bytes_max =     PLAYBACK_MAX_NUM_PERIODS *
+				PLAYBACK_MAX_PERIOD_SIZE,
 	.period_bytes_min =	PLAYBACK_MIN_PERIOD_SIZE,
 	.period_bytes_max =     PLAYBACK_MAX_PERIOD_SIZE,
 	.periods_min =          PLAYBACK_MIN_NUM_PERIODS,
@@ -422,19 +422,6 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 		}
 	}
 
-	ret = snd_pcm_hw_constraint_step(runtime, 0,
-		SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 32);
-	if (ret < 0) {
-		pr_err("constraint for period bytes step ret = %d\n",
-								ret);
-	}
-	ret = snd_pcm_hw_constraint_step(runtime, 0,
-		SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 32);
-	if (ret < 0) {
-		pr_err("constraint for buffer bytes step ret = %d\n",
-								ret);
-	}
-
 	prtd->dsp_cnt = 0;
 	runtime->private_data = prtd;
 
@@ -515,7 +502,7 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 
 	dir = IN;
 	ret = wait_event_timeout(the_locks.eos_wait,
-				prtd->cmd_ack, 1 * HZ);
+				prtd->cmd_ack, 5 * HZ);
 	if (!ret)
 		pr_err("%s: CMD_EOS failed\n", __func__);
 	q6asm_cmd(prtd->audio_client, CMD_CLOSE);
@@ -525,6 +512,9 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 	msm_pcm_routing_dereg_phy_stream(soc_prtd->dai_link->be_id,
 			SNDRV_PCM_STREAM_PLAYBACK);
 	q6asm_audio_client_free(prtd->audio_client);
+
+	prtd->audio_client = NULL; /* Samsung fix - prevent null pointer dereference */
+
 	kfree(prtd);
 	return 0;
 }

@@ -1609,9 +1609,7 @@ static void clear_report_data(struct bt532_ts_info *info)
 			info->button[i] = ICON_BUTTON_UP;
 			input_report_key(info->input_dev, BUTTON_MAPPING_KEY[i], 0);
 			reported = true;
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 			dev_info(&client->dev, "Button up = %d\n", i);
-#endif
 		}
 	}
 
@@ -1633,8 +1631,7 @@ static void clear_report_data(struct bt532_ts_info *info)
 
 static void zinitix_ta_cb(struct tsp_callbacks *cb, int ta_status)
 {
-	struct bt532_ts_info *info =
-			container_of(cb, struct bt532_ts_info, callbacks);
+	struct bt532_ts_info *info = misc_info;
 	struct i2c_client *client = info->client;
 	u16 val;
 
@@ -1643,6 +1640,15 @@ static void zinitix_ta_cb(struct tsp_callbacks *cb, int ta_status)
 
 	info->ta_status = ta_status;
 	val = ta_status;
+
+	if (info->pdata->is_vdd_on() == 0) {
+		/* ta_status 0: charger disconnected
+		 * ta_status 1: charger connected
+		 * ta_status 2: charger disconnected but tsp ic is power-off
+		 * ta_status 3: charger connected but tsp ic is power-off */
+		info->ta_status = ta_status ? 3 : 2;
+		return;
+	}
 
 	switch (info->ta_status) {
 	case 0:	/* TA detach */
@@ -1736,9 +1742,7 @@ static irqreturn_t bt532_touch_irq_handler(int irq, void *data)
 									(BIT_O_ICON0_DOWN + i))) {
 				info->button[i] = ICON_BUTTON_DOWN;
 				input_report_key(info->input_dev, BUTTON_MAPPING_KEY[i], 1);
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 				dev_info(&client->dev, "Button down = %d\n", i);
-#endif
 			}
 		}
 
@@ -1747,9 +1751,7 @@ static irqreturn_t bt532_touch_irq_handler(int irq, void *data)
 									(BIT_O_ICON0_UP + i))) {
 				info->button[i] = ICON_BUTTON_UP;
 				input_report_key(info->input_dev, BUTTON_MAPPING_KEY[i], 0);
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 				dev_info(&client->dev, "Button up = %d\n", i);
-#endif
 			}
 		}
 
@@ -1793,7 +1795,7 @@ static irqreturn_t bt532_touch_irq_handler(int irq, void *data)
 			}
 
 			if (x > maxX || y > maxY) {
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
+#if defined(CONFIG_USE_INPUTLOCATION_FOR_ENG)
 				dev_err(&client->dev,
 							"Invalid coord %d : x=%d, y=%d\n", i, x, y);
 #endif
@@ -1844,7 +1846,7 @@ static irqreturn_t bt532_touch_irq_handler(int irq, void *data)
 			input_report_abs(info->input_dev, ABS_MT_POSITION_Y, y);
 
 			if (zinitix_bit_test(sub_status, SUB_BIT_DOWN)) {
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
+#if defined(CONFIG_USE_INPUTLOCATION_FOR_ENG)
 				dev_info(&client->dev, "Finger [%02d] x = %d, y = %d,"
 							" w = %d\n", i, x, y, w);
 #else
@@ -1882,7 +1884,6 @@ out:
 static void bt532_ts_late_resume(struct early_suspend *h)
 {
 	struct bt532_ts_info *info = misc_info;
-	//info = container_of(h, struct bt532_ts_info, early_suspend);
 
 	if (info == NULL)
 		return;
@@ -1903,6 +1904,12 @@ static void bt532_ts_late_resume(struct early_suspend *h)
 #endif
 	if (mini_init_touch(info) == false)
 		goto fail_late_resume;
+
+	if (info->ta_status == 2)
+		zinitix_ta_cb(charger_callbacks, 0);
+	else if (info->ta_status == 3)
+		zinitix_ta_cb(charger_callbacks, 1);
+
 	enable_irq(info->irq);
 	info->work_state = NOTHING;
 	up(&info->work_lock);

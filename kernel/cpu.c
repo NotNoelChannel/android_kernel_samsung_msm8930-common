@@ -351,7 +351,7 @@ out_notify:
 	return ret;
 }
 
-int __ref cpu_up(unsigned int cpu)
+int __cpuinit cpu_up(unsigned int cpu)
 {
 	int err = 0;
 

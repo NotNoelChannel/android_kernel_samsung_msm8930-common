@@ -251,8 +251,13 @@ static int msm_mctl_add_intf_to_mctl_map(
 
 	mctl_handle = msm_cam_find_handle_from_mctl_ptr(p_mctl);
 	if (mctl_handle == 0) {
-		pr_err("%s Error in finding handle from mctl_ptr, rc = %d",
-			__func__, rc);
+		pr_err("%s Error in finding handle from mctl_ptr",
+				__func__);
+		return -EFAULT;
+	}
+	if (intf_map->num_entries > MSM_V4L2_EXT_CAPTURE_MODE_MAX) {
+		pr_err("%s Error num_entries exceeds max %d",
+				__func__, intf_map->num_entries);
 		return -EFAULT;
 	}
 	for (i = 0; i < intf_map->num_entries; i++) {
@@ -557,10 +562,15 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 		break;
 
 	default:
-		/* ISP config*/
-		D("%s:%d: go to default. Calling msm_isp_config\n",
-			__func__, __LINE__);
-		rc = p_mctl->isp_config(p_mctl, cmd, arg);
+		if(p_mctl && p_mctl->isp_config) {
+			/* ISP config*/
+			D("%s:%d: go to default. Calling msm_isp_config\n",
+				__func__, __LINE__);
+			rc = p_mctl->isp_config(p_mctl, cmd, arg);
+		} else {
+			rc = -EINVAL;
+			pr_err("%s: media controller is null\n", __func__);
+		}
 		break;
 	}
 	D("%s: !!! cmd = %d, rc = %d\n",
@@ -572,17 +582,18 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				 const char *const apps_id)
 {
 	int rc = 0;
-	struct msm_sensor_ctrl_t *s_ctrl = get_sctrl(p_mctl->sensor_sdev);
-	struct msm_camera_sensor_info *sinfo =
-		(struct msm_camera_sensor_info *) s_ctrl->sensordata;
-	struct msm_camera_device_platform_data *camdev = sinfo->pdata;
+	struct msm_sensor_ctrl_t *s_ctrl;
+	struct msm_camera_sensor_info *sinfo;
+	struct msm_camera_device_platform_data *camdev;
 	uint8_t csid_core;
 	D("%s\n", __func__);
 	if (!p_mctl) {
 		pr_err("%s: param is NULL", __func__);
 		return -EINVAL;
 	}
-
+	s_ctrl = get_sctrl(p_mctl->sensor_sdev);
+	sinfo = (struct msm_camera_sensor_info *) s_ctrl->sensordata;
+	camdev = sinfo->pdata;
 	mutex_lock(&p_mctl->lock);
 	/* open sub devices - once only*/
 	if (!p_mctl->opencnt) {
@@ -1090,7 +1101,14 @@ static int msm_mctl_v4l2_s_ctrl(struct file *f, void *pctx,
 			pr_err("%s inst %p Copying plane_info failed ",
 					__func__, pcam_inst);
 			rc = -EFAULT;
+		} else if (pcam_inst->plane_info.num_planes
+				> VIDEO_MAX_PLANES) {
+			pr_err("%s: inst %p got invalid num_planes (%d)",
+					__func__, pcam_inst,
+					pcam_inst->plane_info.num_planes);
+			rc = -EINVAL;
 		}
+
 		D("%s inst %p got plane info: num_planes = %d," \
 				"plane size = %ld %ld ", __func__, pcam_inst,
 				pcam_inst->plane_info.num_planes,
@@ -1121,6 +1139,7 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 		pmctl = msm_cam_server_get_mctl(pcam->mctl_handle);
 		if (pmctl == NULL) {
 			pr_err("%s Invalid mctl ptr", __func__);
+			mutex_unlock(&pcam_inst->inst_lock);
 			return -EINVAL;
 		}
 		pmctl->mctl_vbqueue_init(pcam_inst, &pcam_inst->vid_bufq,
@@ -1614,7 +1633,7 @@ static int msm_mctl_v4l2_subscribe_event(struct v4l2_fh *fh,
 
 	if (sub->type == V4L2_EVENT_ALL)
 		sub->type = V4L2_EVENT_PRIVATE_START+MSM_CAM_APP_NOTIFY_EVENT;
-	rc = v4l2_event_subscribe(fh, sub, 70);
+	rc = v4l2_event_subscribe(fh, sub, 100);
 	if (rc < 0)
 		pr_err("%s: failed for evtType = 0x%x, rc = %d\n",
 						__func__, sub->type, rc);

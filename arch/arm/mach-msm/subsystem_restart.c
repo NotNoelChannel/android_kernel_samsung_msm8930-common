@@ -35,9 +35,6 @@
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
 
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 #include "smd_private.h"
 
 struct subsys_soc_restart_order {
@@ -163,6 +160,7 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 {
 	int ret;
 	int old_val = restart_level;
+	int subtype;
 
 	if (cpu_is_msm9615()) {
 		pr_err("Only Phase 1 subsystem restart is supported\n");
@@ -175,7 +173,9 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 
 	switch (restart_level) {
 	case RESET_SUBSYS_INDEPENDENT:
-		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE) {
+		subtype = socinfo_get_platform_subtype();
+		if ((subtype == PLATFORM_SUBTYPE_SGLTE) ||
+			(subtype == PLATFORM_SUBTYPE_SGLTE2)) {
 			pr_info("Phase 3 is currently unsupported. Using phase 2 instead.\n");
 			restart_level = RESET_SUBSYS_COUPLED;
 		}
@@ -592,17 +592,6 @@ static struct notifier_block panic_nb = {
 	.notifier_call  = ssr_panic_handler,
 };
 
-#ifdef CONFIG_SEC_DEBUG
-int ssr_panic_handler_for_sec_dbg(void)
-{
-	struct subsys_device *dev;
-
-	list_for_each_entry(dev, &subsystem_list, list)
-		if (dev->desc->crash_shutdown)
-			dev->desc->crash_shutdown(dev->desc);
-	return NOTIFY_DONE;
-}
-#endif
 static int __init ssr_init_soc_restart_orders(void)
 {
 	int i;
@@ -645,6 +634,8 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
+	restart_level = RESET_SOC;
+
 	ssr_wq = alloc_workqueue("ssr_wq", WQ_CPU_INTENSIVE, 0);
 	if (!ssr_wq)
 		panic("%s: out of memory\n", __func__);

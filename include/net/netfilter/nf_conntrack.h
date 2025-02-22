@@ -39,36 +39,6 @@ union nf_conntrack_expect_proto {
 	/* insert expect proto private data here */
 };
 
-/* Add protocol helper include file here */
-#include <linux/netfilter/nf_conntrack_ftp.h>
-#include <linux/netfilter/nf_conntrack_pptp.h>
-#include <linux/netfilter/nf_conntrack_h323.h>
-#include <linux/netfilter/nf_conntrack_sane.h>
-#include <linux/netfilter/nf_conntrack_sip.h>
-
-/* per conntrack: application helper private data */
-union nf_conntrack_help {
-	/* insert conntrack helper private data (master) here */
-#if defined(CONFIG_NF_CONNTRACK_FTP) || defined(CONFIG_NF_CONNTRACK_FTP_MODULE)
-	struct nf_ct_ftp_master ct_ftp_info;
-#endif
-#if defined(CONFIG_NF_CONNTRACK_PPTP) || \
-    defined(CONFIG_NF_CONNTRACK_PPTP_MODULE)
-	struct nf_ct_pptp_master ct_pptp_info;
-#endif
-#if defined(CONFIG_NF_CONNTRACK_H323) || \
-    defined(CONFIG_NF_CONNTRACK_H323_MODULE)
-	struct nf_ct_h323_master ct_h323_info;
-#endif
-#if defined(CONFIG_NF_CONNTRACK_SANE) || \
-    defined(CONFIG_NF_CONNTRACK_SANE_MODULE)
-	struct nf_ct_sane_master ct_sane_info;
-#endif
-#if defined(CONFIG_NF_CONNTRACK_SIP) || defined(CONFIG_NF_CONNTRACK_SIP_MODULE)
-	struct nf_ct_sip_master ct_sip_info;
-#endif
-};
-
 #include <linux/types.h>
 #include <linux/skbuff.h>
 #include <linux/timer.h>
@@ -89,21 +59,17 @@ struct nf_conn_help {
 	/* Helper. if any */
 	struct nf_conntrack_helper __rcu *helper;
 
-	union nf_conntrack_help help;
-
 	struct hlist_head expectations;
 
 	/* Current number of expected connections */
 	u8 expecting[NF_CT_MAX_EXPECT_CLASSES];
+
+	/* private helper information. */
+	char data[];
 };
 
 #include <net/netfilter/ipv4/nf_conntrack_ipv4.h>
 #include <net/netfilter/ipv6/nf_conntrack_ipv6.h>
-
-/* Handle NATTYPE Stuff,only if NATTYPE module was defined */
-#if defined(CONFIG_IP_NF_TARGET_NATTYPE_MODULE)
-#include <linux/netfilter_ipv4/ipt_NATTYPE.h>
-#endif
 
 struct nf_conn {
 	/* Usage count in here is 1 for hash table/destruct timer, 1 per skb,
@@ -137,10 +103,6 @@ struct nf_conn {
 	struct nf_ct_ext *ext;
 #ifdef CONFIG_NET_NS
 	struct net *ct_net;
-#endif
-
-#if defined(CONFIG_IP_NF_TARGET_NATTYPE_MODULE)
-	unsigned long nattype_entry;
 #endif
 
 	/* Storage reserved for other modules, must be the last member */

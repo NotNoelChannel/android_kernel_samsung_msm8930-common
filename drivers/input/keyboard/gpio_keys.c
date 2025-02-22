@@ -29,16 +29,11 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/spinlock.h>
-#if defined(CONFIG_SEC_DEBUG)
-#include <mach/sec_debug.h>
-#endif
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI)
-#include <linux/i2c/synaptics_rmi.h>
-#endif
 
-#if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
-extern int wakeup_gpio_num;
-static int force_wakeup_evt;
+#if defined(CONFIG_SEC_PRODUCT_8930)
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI)
+#include <linux/i2c/synaptics_rmi_msm8930.h>
+#endif
 #endif
 
 struct gpio_button_data {
@@ -417,7 +412,6 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 #endif
-
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
 	const struct gpio_keys_button *button = bdata->button;
@@ -425,52 +419,14 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
 
-#if defined(CONFIG_SEC_DEBUG)
-	sec_debug_check_crash_key(button->code, state);
-#endif
-
-#if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
-	if (button->support_evt == SUPPORT_RESUME_KEY_EVENT) {
-		if (wakeup_gpio_num != 0 && state == 0) {
-			force_wakeup_evt = FORCE_KEY_REPORT_ON;
-		} else {
-			force_wakeup_evt = FORCE_KEY_REPORT_OFF;
-		}
-	}
-#endif
-
 	if (type == EV_ABS) {
 		if (state)
 			input_event(input, type, button->code, button->value);
 	} else {
-			input_event(input, type, button->code, !!state);
-	}
-
-	input_sync(input);
-}
-
-#if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
-static void gpio_keys_gpio_force_report_event(struct gpio_button_data *bdata, int state)
-{
-	const struct gpio_keys_button *button = bdata->button;
-	struct input_dev *input = bdata->input;
-	unsigned int type = button->type ?: EV_KEY;
-
-	printk(KERN_DEBUG "%s forced key[%d] p[%d]events\n", __func__, button->code, state);
-
-#if defined(CONFIG_SEC_DEBUG)
-	sec_debug_check_crash_key(button->code, state);
-#endif
-
-	if (type == EV_ABS) {
-		if (state)
-			input_event(input, type, button->code, button->value);
-	} else {
-			input_event(input, type, button->code, !!state);
+		input_event(input, type, button->code, !!state);
 	}
 	input_sync(input);
 }
-#endif
 
 static void gpio_keys_gpio_work_func(struct work_struct *work)
 {
@@ -688,10 +644,7 @@ static int gpio_keys_open(struct input_dev *input)
 		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
 
 hall_sensor_error:
-
 #endif
-
-
 	return ddata->enable ? ddata->enable(input->dev.parent) : 0;
 }
 
@@ -988,6 +941,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			error);
 		goto fail2;
 	}
+
 	error = input_register_device(input);
 	if (error) {
 		dev_err(dev, "Unable to register input device, error: %d\n",
@@ -1002,8 +956,6 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			gpio_keys_gpio_report_event(bdata);
 	}
 	input_sync(input);
-
-
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
@@ -1075,9 +1027,6 @@ static int gpio_keys_resume(struct device *dev)
 {
 	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
 	int i;
-#if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
-    struct gpio_button_data *bdata_ext;
-#endif
 
 	for (i = 0; i < ddata->n_buttons; i++) {
 		struct gpio_button_data *bdata = &ddata->data[i];
@@ -1089,31 +1038,6 @@ static int gpio_keys_resume(struct device *dev)
 	}
 	input_sync(ddata->input);
 
-#if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
-	for (i = 0; i < ddata->n_buttons; i++) {
-		bdata_ext = &ddata->data[i];
-
-		/* first check support resume event */
-		if (bdata_ext->button->support_evt == SUPPORT_RESUME_KEY_EVENT) {
-			if (force_wakeup_evt == FORCE_KEY_REPORT_ON) {
-				if (bdata_ext->button->gpio == wakeup_gpio_num) {
-					if (gpio_is_valid(bdata_ext->button->gpio)) {
-						/* force key events */
-						printk(KERN_DEBUG "%s force event!!!\n", __func__);
-						gpio_keys_gpio_force_report_event(bdata_ext, 1);
-						mdelay(1);
-						gpio_keys_gpio_force_report_event(bdata_ext, 0);
-					}
-
-					/* clear events */
-					wakeup_gpio_num = 0;
-					force_wakeup_evt = FORCE_KEY_REPORT_OFF;
-				}
-			}
-		}
-	}
-#endif
-
 	return 0;
 }
 #endif
@@ -1124,7 +1048,7 @@ static struct platform_driver gpio_keys_device_driver = {
 	.probe		= gpio_keys_probe,
 	.remove		= __devexit_p(gpio_keys_remove),
 	.driver		= {
-		.name	= "sec_keys",
+		.name	= "gpio-keys",
 		.owner	= THIS_MODULE,
 		.pm	= &gpio_keys_pm_ops,
 		.of_match_table = gpio_keys_of_match,

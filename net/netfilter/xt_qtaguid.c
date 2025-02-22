@@ -614,13 +614,11 @@ static struct tag_ref *get_tag_ref(tag_t full_tag,
 
 	DR_DEBUG("qtaguid: get_tag_ref(0x%llx)\n",
 		 full_tag);
-	spin_lock_bh(&uid_tag_data_tree_lock);
 	tr_entry = lookup_tag_ref(full_tag, &utd_entry);
 	BUG_ON(IS_ERR_OR_NULL(utd_entry));
 	if (!tr_entry)
 		tr_entry = new_tag_ref(full_tag, utd_entry);
 
-	spin_unlock_bh(&uid_tag_data_tree_lock);
 	if (utd_res)
 		*utd_res = utd_entry;
 	DR_DEBUG("qtaguid: get_tag_ref(0x%llx) utd=%p tr=%p\n",
@@ -788,19 +786,37 @@ static int pp_iface_stat_line(bool header, char *outp,
 			       "tx_other_bytes tx_other_packets\n"
 			);
 	} else {
+		struct rtnl_link_stats64 dev_stats, *stats;
+		__u64 rx_pkts, tx_pkts, rx_bytes, tx_bytes;
 		struct data_counters *cnts;
 		int cnt_set = 0;   /* We only use one set for the device */
 		cnts = &iface_entry->totals_via_skb;
+
+		if (iface_entry->active) {
+			stats = dev_get_stats(iface_entry->net_dev, &dev_stats);
+			rx_bytes = iface_entry->totals_via_dev[IFS_RX].bytes
+					+ stats->rx_bytes;
+			rx_pkts = iface_entry->totals_via_dev[IFS_RX].packets
+					+ stats->rx_packets;
+			tx_bytes = iface_entry->totals_via_dev[IFS_TX].bytes
+					+ stats->tx_bytes;
+			tx_pkts = iface_entry->totals_via_dev[IFS_TX].packets
+					+ stats->tx_packets;
+		} else {
+			rx_bytes = iface_entry->totals_via_dev[IFS_RX].bytes;
+			rx_pkts = iface_entry->totals_via_dev[IFS_RX].packets;
+			tx_bytes = iface_entry->totals_via_dev[IFS_TX].bytes;
+			tx_pkts = iface_entry->totals_via_dev[IFS_TX].packets;
+		}
+
 		len = snprintf(
 			outp, char_count,
 			"%s "
 			"%llu %llu %llu %llu %llu %llu %llu %llu "
 			"%llu %llu %llu %llu %llu %llu %llu %llu\n",
 			iface_entry->ifname,
-			dc_sum_bytes(cnts, cnt_set, IFS_RX),
-			dc_sum_packets(cnts, cnt_set, IFS_RX),
-			dc_sum_bytes(cnts, cnt_set, IFS_TX),
-			dc_sum_packets(cnts, cnt_set, IFS_TX),
+			rx_bytes, rx_pkts,
+			tx_bytes, tx_pkts,
 			cnts->bpc[cnt_set][IFS_RX][IFS_TCP].bytes,
 			cnts->bpc[cnt_set][IFS_RX][IFS_TCP].packets,
 			cnts->bpc[cnt_set][IFS_RX][IFS_UDP].bytes,
@@ -1211,7 +1227,7 @@ static int ipx_proto(const struct sk_buff *skb,
 
 	switch (par->family) {
 	case NFPROTO_IPV6:
-		tproto = ipv6_find_hdr(skb, &thoff, -1, NULL);
+		tproto = ipv6_find_hdr(skb, &thoff, -1, NULL, NULL);
 		if (tproto < 0)
 			MT_DEBUG("%s(): transport header not found in ipv6"
 				 " skb=%p\n", __func__, skb);
@@ -1423,11 +1439,12 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 		"uid=%u sk=%p dir=%d proto=%d bytes=%d)\n",
 		 ifname, uid, sk, direction, proto, bytes);
 
-
+	spin_lock_bh(&iface_stat_list_lock);
 	iface_entry = get_iface_entry(ifname);
 	if (!iface_entry) {
 		pr_err_ratelimited("qtaguid: tag_stat: stat_update() "
 				   "%s not found\n", ifname);
+		spin_unlock_bh(&iface_stat_list_lock);
 		return;
 	}
 	/* It is ok to process data when an iface_entry is inactive */
@@ -1463,8 +1480,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 		 * {0, uid_tag} will also get updated.
 		 */
 		tag_stat_update(tag_stat_entry, direction, proto, bytes);
-		spin_unlock_bh(&iface_entry->tag_stat_list_lock);
-		return;
+		goto unlock;
 	}
 
 	/* Loop over tag list under this interface for {0,uid_tag} */
@@ -1504,6 +1520,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 	tag_stat_update(new_tag_stat, direction, proto, bytes);
 unlock:
 	spin_unlock_bh(&iface_entry->tag_stat_list_lock);
+	spin_unlock_bh(&iface_stat_list_lock);
 }
 
 static int iface_netdev_event_handler(struct notifier_block *nb,
@@ -1747,6 +1764,8 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	struct sock *sk;
 	uid_t sock_uid;
 	bool res;
+	bool set_sk_callback_lock = false;
+
 	/*
 	 * TODO: unhack how to force just accounting.
 	 * For now we only do tag stats when the uid-owner is not requested
@@ -1781,8 +1800,6 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	}
 
 	sk = skb->sk;
-	if (sk && sk->sk_state == TCP_TIME_WAIT)
-		sk = NULL;
 	if (sk == NULL) {
 		/*
 		 * A missing sk->sk_socket happens when packets are in-flight
@@ -1804,6 +1821,8 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	MT_DEBUG("qtaguid[%d]: sk=%p got_sock=%d fam=%d proto=%d\n",
 		 par->hooknum, sk, got_sock, par->family, ipx_proto(skb, par));
 	if (sk != NULL) {
+		set_sk_callback_lock = true;
+		read_lock_bh(&sk->sk_callback_lock);
 		MT_DEBUG("qtaguid[%d]: sk=%p->sk_socket=%p->file=%p\n",
 			par->hooknum, sk, sk->sk_socket,
 			sk->sk_socket ? sk->sk_socket->file : (void *)-1LL);
@@ -1875,6 +1894,8 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 put_sock_ret_res:
 	if (got_sock)
 		xt_socket_put_sk(sk);
+	if (set_sk_callback_lock)
+		read_unlock_bh(&sk->sk_callback_lock);
 ret_res:
 	MT_DEBUG("qtaguid[%d]: left %d\n", par->hooknum, res);
 	return res;
@@ -1972,7 +1993,7 @@ static int qtaguid_ctrl_proc_read(char *page, char **num_items_returned,
 		f_count = atomic_long_read(
 			&sock_tag_entry->socket->file->f_count);
 		len = snprintf(outp, char_count,
-			       "sock=%p tag=0x%llx (uid=%u) pid=%u "
+			       "sock=%pK tag=0x%llx (uid=%u) pid=%u "
 			       "f_count=%lu\n",
 			       sock_tag_entry->sk,
 			       sock_tag_entry->tag, uid,
@@ -2084,6 +2105,7 @@ static int ctrl_cmd_delete(const char *input)
 
 	/* Delete socket tags */
 	spin_lock_bh(&sock_tag_list_lock);
+	spin_lock_bh(&uid_tag_data_tree_lock);
 	node = rb_first(&sock_tag_tree);
 	while (node) {
 		st_entry = rb_entry(node, struct sock_tag, sock_node);
@@ -2113,6 +2135,7 @@ static int ctrl_cmd_delete(const char *input)
 				list_del(&st_entry->list);
 		}
 	}
+	spin_unlock_bh(&uid_tag_data_tree_lock);
 	spin_unlock_bh(&sock_tag_list_lock);
 
 	sock_tag_tree_erase(&st_to_free_tree);
@@ -2317,10 +2340,12 @@ static int ctrl_cmd_tag(const char *input)
 	full_tag = combine_atag_with_uid(acct_tag, uid);
 
 	spin_lock_bh(&sock_tag_list_lock);
+	spin_lock_bh(&uid_tag_data_tree_lock);
 	sock_tag_entry = get_sock_stat_nl(el_socket->sk);
 	tag_ref_entry = get_tag_ref(full_tag, &uid_tag_data_entry);
 	if (IS_ERR(tag_ref_entry)) {
 		res = PTR_ERR(tag_ref_entry);
+		spin_unlock_bh(&uid_tag_data_tree_lock);
 		spin_unlock_bh(&sock_tag_list_lock);
 		goto err_put;
 	}
@@ -2332,6 +2357,26 @@ static int ctrl_cmd_tag(const char *input)
 			 "st@%p ...->f_count=%ld\n",
 			 input, el_socket->sk, sock_tag_entry,
 			 atomic_long_read(&el_socket->file->f_count));
+
+		/*
+		 * The tagged socket should be the same as the one from this
+		 * sockfd_lookup(). Otherwise, some unexpected error happens,
+		 * we just put back this ref and return.
+		 */
+		if (sock_tag_entry->socket != el_socket) {
+			pr_err("qtaguid: ctrl_tag(%s): "
+			       "socket mismatch\n",
+			       input);
+			BUG_ON(tag_ref_entry->num_sock_tags <= 0);
+			tag_ref_entry->num_sock_tags--;
+			free_tag_ref_from_utd_entry(tag_ref_entry,
+						    uid_tag_data_entry);
+			spin_unlock_bh(&uid_tag_data_tree_lock);
+			spin_unlock_bh(&sock_tag_list_lock);
+			res = -EINVAL;
+			goto err_put;
+		}
+
 		/*
 		 * This is a re-tagging, so release the sock_fd that was
 		 * locked at the time of the 1st tagging.
@@ -2354,16 +2399,20 @@ static int ctrl_cmd_tag(const char *input)
 			pr_err("qtaguid: ctrl_tag(%s): "
 			       "socket tag alloc failed\n",
 			       input);
+			BUG_ON(tag_ref_entry->num_sock_tags <= 0);
+			tag_ref_entry->num_sock_tags--;
+			free_tag_ref_from_utd_entry(tag_ref_entry,
+						    uid_tag_data_entry);
+			spin_unlock_bh(&uid_tag_data_tree_lock);
 			spin_unlock_bh(&sock_tag_list_lock);
 			res = -ENOMEM;
-			goto err_tag_unref_put;
+			goto err_put;
 		}
 		sock_tag_entry->sk = el_socket->sk;
 		sock_tag_entry->socket = el_socket;
 		sock_tag_entry->pid = current->tgid;
 		sock_tag_entry->tag = combine_atag_with_uid(acct_tag,
 							    uid);
-		spin_lock_bh(&uid_tag_data_tree_lock);
 		pqd_entry = proc_qtu_data_tree_search(
 			&proc_qtu_data_tree, current->tgid);
 		/*
@@ -2381,11 +2430,11 @@ static int ctrl_cmd_tag(const char *input)
 		else
 			list_add(&sock_tag_entry->list,
 				 &pqd_entry->sock_tag_list);
-		spin_unlock_bh(&uid_tag_data_tree_lock);
 
 		sock_tag_tree_insert(sock_tag_entry, &sock_tag_tree);
 		atomic64_inc(&qtu_events.sockets_tagged);
 	}
+	spin_unlock_bh(&uid_tag_data_tree_lock);
 	spin_unlock_bh(&sock_tag_list_lock);
 	/* We keep the ref to the socket (file) until it is untagged */
 	CT_DEBUG("qtaguid: ctrl_tag(%s): done st@%p ...->f_count=%ld\n",
@@ -2393,10 +2442,6 @@ static int ctrl_cmd_tag(const char *input)
 		 atomic_long_read(&el_socket->file->f_count));
 	return 0;
 
-err_tag_unref_put:
-	BUG_ON(tag_ref_entry->num_sock_tags <= 0);
-	tag_ref_entry->num_sock_tags--;
-	free_tag_ref_from_utd_entry(tag_ref_entry, uid_tag_data_entry);
 err_put:
 	CT_DEBUG("qtaguid: ctrl_tag(%s): done. ...->f_count=%ld\n",
 		 input, atomic_long_read(&el_socket->file->f_count) - 1);

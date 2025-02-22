@@ -1966,7 +1966,6 @@ err:
 
 	if (handle)
 		qce_close(handle);
-	misc_deregister(&podev->miscdevice);
 	platform_set_drvdata(pdev, NULL);
 	podev->qce = NULL;
 	podev->pdev = NULL;

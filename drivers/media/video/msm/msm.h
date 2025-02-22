@@ -162,6 +162,7 @@ enum msm_camera_v4l2_subdev_notify {
 	NOTIFY_AXI_IRQ,
 	NOTIFY_GESTURE_EVT, /* arg = v4l2_event */
 	NOTIFY_GESTURE_CAM_EVT, /* arg = int */
+	NOTIFY_OVERFLOW_RECOVERY,
 	NOTIFY_INVALID
 };
 
@@ -359,7 +360,6 @@ struct msm_cam_v4l2_dev_inst {
 	int vbqueue_initialized;
 	struct mutex inst_lock;
 	uint32_t inst_handle;
-	uint32_t sequence;
 };
 
 struct msm_cam_mctl_node {

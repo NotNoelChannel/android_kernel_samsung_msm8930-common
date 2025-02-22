@@ -595,6 +595,9 @@ config LEDS_TRIGGER_SLEEP
 	help
 	  This turns LEDs on when the screen is off but the cpu still running.
 
+comment "iptables trigger is under Netfilter config (LED target)"
+	depends on LEDS_TRIGGERS
+
 config LEDS_AN30259A
 	tristate "LED support for AN30259A I2C chip"
 	depends on LEDS_CLASS
@@ -602,8 +605,5 @@ config LEDS_AN30259A
 	help
 	  This option enables support for LEDs connected to the AN30259A
 	  LED driver chip accessed via the I2C bus.
-
-comment "iptables trigger is under Netfilter config (LED target)"
-	depends on LEDS_TRIGGERS
 
 endif # NEW_LEDS

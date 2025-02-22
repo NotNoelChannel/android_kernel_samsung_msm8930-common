@@ -45,17 +45,8 @@
 #include <asm/uaccess.h>
 
 #include <mach/msm_rtb.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#include <linux/io.h>
-#endif
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
-#ifdef LOCAL_CONFIG_PRINT_EXTRA_INFO
-#define EXTRA_BUF_SIZE (TASK_COMM_LEN+16)
-#else
-#define EXTRA_BUF_SIZE 0
-#endif
 
 /*
  * Architectures can override it:
@@ -198,109 +189,6 @@ static int __init log_buf_len_setup(char *str)
 }
 early_param("log_buf_len", log_buf_len_setup);
 
-#ifdef CONFIG_SEC_DEBUG
-#define CONFIG_PRINTK_NOCACHE
-#define LOG_MAGIC 0x4d474f4c /* "LOGM" */
-static unsigned *sec_log_ptr;
-static char *sec_log_buf;
-static unsigned sec_log_size;
-#ifdef CONFIG_PRINTK_NOCACHE
-static unsigned sec_log_save_size;
-static unsigned long long sec_log_save_base;
-unsigned long long sec_log_reserve_base;
-unsigned sec_log_reserve_size;
-unsigned int *sec_log_irq_en;
-#endif
-static inline void emit_sec_log_char(char c)
-{
-	if (sec_log_buf && sec_log_ptr) {
-		sec_log_buf[*sec_log_ptr & (sec_log_size - 1)] = c;
-		(*sec_log_ptr)++;
-	}
-}
-#ifdef CONFIG_SEC_DEBUG_SUBSYS
-void sec_debug_subsys_set_kloginfo(unsigned int *idx_paddr,
-	unsigned int *log_paddr, unsigned int *size)
-{
-	*idx_paddr = (unsigned int)&log_end -
-		CONFIG_PAGE_OFFSET + CONFIG_PHYS_OFFSET;
-	*log_paddr = (unsigned int)__log_buf -
-		CONFIG_PAGE_OFFSET + CONFIG_PHYS_OFFSET;
-	*size = __LOG_BUF_LEN;
-}
-#endif
-#ifdef CONFIG_PRINTK_NOCACHE
-static int __init printk_remap_nocache(void)
-{
-	void __iomem *nocache_base = 0;
-	unsigned *sec_log_mag;
-	unsigned long flags;
-	unsigned start;
-	int rc = 0;
-	sec_getlog_supply_kloginfo(log_buf);
-	if (0 == sec_debug_is_enabled()) {
-#ifdef CONFIG_SEC_DEBUG_LOW_LOG
-		nocache_base = ioremap_nocache(sec_log_save_base - 4096,
-		sec_log_save_size + 8192);
-		nocache_base = nocache_base + 4096;
-		sec_log_mag = nocache_base - 8;
-		sec_log_ptr = nocache_base - 4;
-		sec_log_buf = nocache_base;
-		sec_log_size = sec_log_save_size;
-		sec_log_irq_en = nocache_base - 0xC ;
-#endif
-		return rc;
-	}
-	pr_err("%s: sec_log_save_size %d at sec_log_save_base 0x%x\n",
-	__func__, sec_log_save_size, (unsigned int)sec_log_save_base);
-	pr_err("%s: sec_log_reserve_size %d at sec_log_reserve_base 0x%x\n",
-	__func__, sec_log_reserve_size, (unsigned int)sec_log_reserve_base);
-	nocache_base = ioremap_nocache(sec_log_save_base - 4096,
-					sec_log_save_size + 8192);
-	nocache_base = nocache_base + 4096;
-	sec_log_mag = nocache_base - 8;
-	sec_log_ptr = nocache_base - 4;
-	sec_log_buf = nocache_base;
-	sec_log_size = sec_log_save_size;
-	sec_log_irq_en = nocache_base - 0xC ;
-	spin_lock_irqsave((spinlock_t *)&logbuf_lock, flags);
-	if (*sec_log_mag != LOG_MAGIC) {
-		*sec_log_ptr = 0;
-		*sec_log_mag = LOG_MAGIC;
-	}
-	start = min(con_start, log_start);
-	while (start != log_end) {
-		emit_sec_log_char(__log_buf
-				  [start++ & (__LOG_BUF_LEN - 1)]);
-	}
-	spin_unlock_irqrestore((spinlock_t *)&logbuf_lock, flags);
-	return rc;
-}
-#endif
-static int __init sec_log_setup(char *str)
-{
-	unsigned size = memparse(str, &str);
-	int ret;
-	if (size && (size == roundup_pow_of_two(size)) && (*str == '@')) {
-		unsigned long long base = 0;
-	ret = kstrtoull(++str, 0, &base);
-#ifdef CONFIG_PRINTK_NOCACHE
-		sec_log_save_size = size;
-		sec_log_save_base = base;
-		sec_log_size = size;
-		sec_log_reserve_base = base - 8;
-		sec_log_reserve_size = size + 8;
-		return 1;
-#endif
-	}
-	return 1;
-}
-__setup("sec_log=", sec_log_setup);
-#else
-static inline void emit_sec_log_char(char c)
-{
-}
-#endif
 void __init setup_log_buf(int early)
 {
 	unsigned long flags;
@@ -847,9 +735,6 @@ static void emit_log_char(char c)
 		con_start = log_end - log_buf_len;
 	if (logged_chars < log_buf_len)
 		logged_chars++;
-#ifdef CONFIG_SEC_DEBUG
-	emit_sec_log_char(c);
-#endif
 }
 
 /*
@@ -1113,29 +998,13 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 
 			if (printk_time) {
 				/* Add the current time stamp */
-#ifdef LOCAL_CONFIG_PRINT_EXTRA_INFO
-				char tbuf[50+EXTRA_BUF_SIZE], *tp;
-#else
 				char tbuf[50], *tp;
-#endif
 				unsigned tlen;
 				unsigned long long t;
 				unsigned long nanosec_rem;
 
 				t = cpu_clock(printk_cpu);
 				nanosec_rem = do_div(t, 1000000000);
-#ifdef LOCAL_CONFIG_PRINT_EXTRA_INFO
-				if (console_loglevel >= 9)
-					tlen = snprintf(tbuf, sizeof(tbuf),
-				"[%5lu.%06lu]%c[%1d:%15s:%5d] ",
-						(unsigned long) t,
-						nanosec_rem / 1000,
-						in_interrupt() ? 'I' : ' ',
-						smp_processor_id(),
-						current->comm,
-						task_pid_nr(current));
-				else
-#endif
 				tlen = sprintf(tbuf, "[%5lu.%06lu] ",
 						(unsigned long) t,
 						nanosec_rem / 1000);
@@ -1343,13 +1212,6 @@ void resume_console(void)
 	console_unlock();
 }
 
-#if defined(CONFIG_GSM_MODEM_SPRD6500)
-int get_console_suspended(void)
-{
-	return console_suspended;
-}
-#endif
-
 static void __cpuinit console_flush(struct work_struct *work)
 {
 	console_lock();
@@ -1537,8 +1399,6 @@ again:
 	raw_spin_lock(&logbuf_lock);
 	if (con_start != log_end)
 		retry = 1;
-	else
-		retry = 0;
 	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
 
 	if (retry && console_trylock())
@@ -2030,7 +1890,4 @@ void kmsg_dump(enum kmsg_dump_reason reason)
 		dumper->dump(dumper, reason, s1, l1, s2, l2);
 	rcu_read_unlock();
 }
-#ifdef CONFIG_PRINTK_NOCACHE
-module_init(printk_remap_nocache);
-#endif
 #endif

@@ -18,7 +18,6 @@
  *
  */
 
-#include <linux/export.h>
 #include <net/addrconf.h>
 #include <net/ipv6.h>
 #include <net/ip6_route.h>
@@ -26,6 +25,7 @@
 #include <net/udp.h>
 #include <net/transp_v6.h>
 #include <net/ping.h>
+#include <linux/module.h>
 
 struct proto pingv6_prot = {
 	.name =		"PINGv6",
@@ -162,6 +162,7 @@ int ping_v6_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	fl6.saddr = np->saddr;
 	fl6.daddr = *daddr;
 	fl6.flowi6_mark = sk->sk_mark;
+	fl6.flowi6_uid = sk->sk_uid;
 	fl6.fl6_icmp_type = user_icmph.icmp6_type;
 	fl6.fl6_icmp_code = user_icmph.icmp6_code;
 	security_sk_classify_flow(sk, flowi6_to_flowi(&fl6));

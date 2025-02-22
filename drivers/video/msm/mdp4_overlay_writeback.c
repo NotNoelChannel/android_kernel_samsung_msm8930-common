@@ -201,14 +201,17 @@ int mdp4_overlay_writeback_off(struct platform_device *pdev)
 	}
 
 	complete(&vctrl->ov_comp);
-	msleep(20);
-	mdp_clk_ctrl(1);
+	msleep(20); 			  
+	mdp_clk_ctrl(1);		  
+
 	/* sanity check, free pipes besides base layer */
 	mdp4_overlay_unset_mixer(pipe->mixer_num);
 	mdp4_mixer_stage_down(pipe, 1);
 	mdp4_overlay_pipe_free(pipe, 1);
 	vctrl->base_pipe = NULL;
+
 	mdp_clk_ctrl(0);
+
 	undx =  vctrl->update_ndx;
 	vp = &vctrl->vlist[undx];
 	if (vp->update_cnt) {
@@ -373,11 +376,11 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	pipe = vctrl->base_pipe;
 	mixer = pipe->mixer_num;
 
-	/*
-	 * allow stage_commit without pipes queued
-	 * (vp->update_cnt == 0) to unstage pipes after
-	 * overlay_unset
-	 */
+/*
+* allow stage_commit without pipes queued
+* (vp->update_cnt == 0) to unstage pipes after
+* overlay_unset
+*/
 
 	vctrl->update_ndx++;
 	vctrl->update_ndx &= 0x01;
@@ -388,11 +391,19 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	if (rc != 0) {
 		pr_err("%s: mdp4_wfd_dequeue_update failed !! mfd=%x\n",
 			__func__, (int)mfd);
+#if !defined(CONFIG_SEC_PRODUCT_8930)
+		pipe = vp->plist;
+		for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
+			pipe->pipe_used = 0;
+			pr_info("%s: dequeue update failed, unsetting pipes\n", __func__);
+		}
+
+		return cnt;
+#endif /* CONFIG_SEC_PRODUCT_8930 */
 	}
 	/* free previous committed iommu back to pool */
 	mdp4_overlay_iommu_unmap_freelist(mixer);
 
-	mdp_clk_ctrl(1);
 	pipe = vp->plist;
 	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
 		if (pipe->pipe_used) {
@@ -410,8 +421,8 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 			pipe->pipe_used = 0; /* clear */
 		}
 	}
-
-	mdp_clk_ctrl(1);
+	if (wait)
+		mdp_clk_ctrl(1);
 
 	mdp4_mixer_stage_commit(mixer);
 
@@ -433,8 +444,12 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 
 	mdp4_stat.overlay_commit[pipe->mixer_num]++;
 
-	if (wait)
+	if (wait) {
+		mutex_unlock(&vctrl->mfd->dma->ov_mutex);
 		mdp4_wfd_wait4ov(cndx);
+		mdp_clk_ctrl(0);
+		mutex_lock(&vctrl->mfd->dma->ov_mutex);
+	}
 
 	mdp4_wfd_queue_wakeup(mfd, node);
 
@@ -501,7 +516,6 @@ void mdp4_overlay2_done_wfd(struct mdp_dma_data *dma)
 	vsync_irq_disable(INTR_OVERLAY2_DONE, MDP_OVERLAY2_TERM);
 	vctrl->ov_done++;
 	complete(&vctrl->ov_comp);
-	schedule_work(&vctrl->clk_work);
 	pr_debug("%s ovdone interrupt\n", __func__);
 	spin_unlock(&vctrl->spin_lock);
 }
@@ -531,6 +545,7 @@ void mdp4_writeback_overlay(struct msm_fb_data_type *mfd)
 	mdp4_overlay_mdp_perf_upd(mfd, 0);
 
 	mutex_unlock(&mfd->dma->ov_mutex);
+
 }
 
 static int mdp4_overlay_writeback_register_buffer(
@@ -595,7 +610,7 @@ static struct msmfb_writeback_data_list *get_if_registered(
 					  (ulong *)&temp->addr,
 					  (ulong *)&len,
 					  0,
-					  ION_IOMMU_UNMAP_DELAYED)) {
+					  0)) {
 				ion_free(mfd->iclient, srcp_ihdl);
 				pr_err("%s: unable to get ion mapping addr\n",
 				       __func__);
@@ -879,7 +894,7 @@ static int mdp4_wfd_dequeue_update(struct msm_fb_data_type *mfd,
 	*wfdnode = node;
 
 	mutex_unlock(&mfd->unregister_mutex);
-	return 0;
+    return 0;
 }
 
 static void mdp4_wfd_queue_wakeup(struct msm_fb_data_type *mfd,

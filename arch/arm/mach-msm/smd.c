@@ -32,7 +32,7 @@
 #include <linux/remote_spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/kfifo.h>
-#include <linux/wakelock.h>
+#include <linux/pm.h>
 #include <linux/notifier.h>
 #include <linux/sort.h>
 #include <linux/suspend.h>
@@ -93,7 +93,7 @@ struct smsm_shared_info {
 
 static struct smsm_shared_info smsm_info;
 static struct kfifo smsm_snapshot_fifo;
-static struct wake_lock smsm_snapshot_wakelock;
+static struct wakeup_source smsm_snapshot_ws;
 static int smsm_snapshot_count;
 static DEFINE_SPINLOCK(smsm_snapshot_count_lock);
 
@@ -182,17 +182,6 @@ struct interrupt_stat interrupt_stats[NUM_SMD_SUBSYSTEMS];
 #define SMSM_INTR_MASK_ADDR(entry, host) (smsm_info.intr_mask + \
 					  entry * SMSM_NUM_HOSTS + host)
 #define SMSM_INTR_MUX_ADDR(entry)        (smsm_info.intr_mux + entry)
-
-/**
- * OVERFLOW_ADD_UNSIGNED() - check for unsigned overflow
- *
- * @type: type to check for overflow
- * @a: left value to use
- * @b: right value to use
- * @returns: true if a + b will result in overflow; false otherwise
- */
-#define OVERFLOW_ADD_UNSIGNED(type, a, b) \
-       (((type)~0 - (a)) < (b) ? true : false)
 
 /* Internal definitions which are not exported in some targets */
 enum {
@@ -365,7 +354,7 @@ static remote_spinlock_t remote_spinlock;
 
 static LIST_HEAD(smd_ch_list_loopback);
 static void smd_fake_irq_handler(unsigned long arg);
-static void smsm_cb_snapshot(uint32_t use_wakelock);
+static void smsm_cb_snapshot(uint32_t use_wakeup_source);
 
 static struct workqueue_struct *smsm_cb_wq;
 static void notify_smsm_cb_clients_worker(struct work_struct *work);
@@ -1086,18 +1075,12 @@ static unsigned ch_read_buffer(struct smd_channel *ch, void **ptr)
 {
 	unsigned head = ch->half_ch->get_head(ch->recv);
 	unsigned tail = ch->half_ch->get_tail(ch->recv);
-	unsigned fifo_size = ch->fifo_size;
-
-	BUG_ON(fifo_size >= SZ_1M);
-	BUG_ON(head >= fifo_size);
-	BUG_ON(tail >= fifo_size);
-	BUG_ON(OVERFLOW_ADD_UNSIGNED(uintptr_t, (uintptr_t)ch->recv_data,
-								tail));
 	*ptr = (void *) (ch->recv_data + tail);
+
 	if (tail <= head)
 		return head - tail;
 	else
-		return fifo_size - tail;
+		return ch->fifo_size - tail;
 }
 
 static int read_intr_blocked(struct smd_channel *ch)
@@ -1186,23 +1169,15 @@ static unsigned ch_write_buffer(struct smd_channel *ch, void **ptr)
 {
 	unsigned head = ch->half_ch->get_head(ch->send);
 	unsigned tail = ch->half_ch->get_tail(ch->send);
-	unsigned fifo_size = ch->fifo_size;
-
-	BUG_ON(fifo_size >= SZ_1M);
-	BUG_ON(head >= fifo_size);
-	BUG_ON(tail >= fifo_size);
-	BUG_ON(OVERFLOW_ADD_UNSIGNED(uintptr_t, (uintptr_t)ch->send_data,
-								head));
-
 	*ptr = (void *) (ch->send_data + head);
 
 	if (head < tail) {
 		return tail - head - 1;
 	} else {
 		if (tail == 0)
-			return fifo_size - head - 1;
+			return ch->fifo_size - head - 1;
 		else
-			return fifo_size - head;
+			return ch->fifo_size - head;
 	}
 }
 
@@ -2106,6 +2081,29 @@ int smd_write_end(smd_channel_t *ch)
 }
 EXPORT_SYMBOL(smd_write_end);
 
+int smd_write_segment_avail(smd_channel_t *ch)
+{
+	int n;
+
+	if (!ch) {
+		pr_err("%s: Invalid channel specified\n", __func__);
+		return -ENODEV;
+	}
+	if (!ch->is_pkt_ch) {
+		pr_err("%s: non-packet channel specified\n", __func__);
+		return -ENODEV;
+	}
+
+	n = smd_stream_write_avail(ch);
+
+	/* pkt hdr already written, no need to reserve space for it */
+	if (ch->pending_pkt_sz)
+		return n;
+
+	return n > SMD_HEADER_SIZE ? n - SMD_HEADER_SIZE : 0;
+}
+EXPORT_SYMBOL(smd_write_segment_avail);
+
 int smd_read(smd_channel_t *ch, void *data, int len)
 {
 	if (!ch) {
@@ -2547,8 +2545,7 @@ static int smsm_init(void)
 		pr_err("%s: SMSM state fifo alloc failed %d\n", __func__, i);
 		return i;
 	}
-	wake_lock_init(&smsm_snapshot_wakelock, WAKE_LOCK_SUSPEND,
-			"smsm_snapshot");
+	wakeup_source_init(&smsm_snapshot_ws, "smsm_snapshot");
 
 	if (!smsm_info.state) {
 		smsm_info.state = smem_alloc2(ID_SHARED_STATE,
@@ -2631,7 +2628,7 @@ void smsm_reset_modem_cont(void)
 }
 EXPORT_SYMBOL(smsm_reset_modem_cont);
 
-static void smsm_cb_snapshot(uint32_t use_wakelock)
+static void smsm_cb_snapshot(uint32_t use_wakeup_source)
 {
 	int n;
 	uint32_t new_state;
@@ -2657,11 +2654,11 @@ static void smsm_cb_snapshot(uint32_t use_wakelock)
 	 *
 	 *   This order ensures that 1 will always occur before abc.
 	 */
-	if (use_wakelock) {
+	if (use_wakeup_source) {
 		spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 		if (smsm_snapshot_count == 0) {
 			SMx_POWER_INFO("SMSM snapshot wake lock\n");
-			wake_lock(&smsm_snapshot_wakelock);
+			__pm_stay_awake(&smsm_snapshot_ws);
 		}
 		++smsm_snapshot_count;
 		spin_unlock_irqrestore(&smsm_snapshot_count_lock, flags);
@@ -2681,8 +2678,8 @@ static void smsm_cb_snapshot(uint32_t use_wakelock)
 
 	/* queue wakelock usage flag */
 	ret = kfifo_in(&smsm_snapshot_fifo,
-			&use_wakelock, sizeof(use_wakelock));
-	if (ret != sizeof(use_wakelock)) {
+			&use_wakeup_source, sizeof(use_wakeup_source));
+	if (ret != sizeof(use_wakeup_source)) {
 		pr_err("%s: SMSM snapshot failure %d\n", __func__, ret);
 		goto restore_snapshot_count;
 	}
@@ -2691,13 +2688,13 @@ static void smsm_cb_snapshot(uint32_t use_wakelock)
 	return;
 
 restore_snapshot_count:
-	if (use_wakelock) {
+	if (use_wakeup_source) {
 		spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 		if (smsm_snapshot_count) {
 			--smsm_snapshot_count;
 			if (smsm_snapshot_count == 0) {
 				SMx_POWER_INFO("SMSM snapshot wake unlock\n");
-				wake_unlock(&smsm_snapshot_wakelock);
+				__pm_relax(&smsm_snapshot_ws);
 			}
 		} else {
 			pr_err("%s: invalid snapshot count\n", __func__);
@@ -2942,7 +2939,7 @@ void notify_smsm_cb_clients_worker(struct work_struct *work)
 	int n;
 	uint32_t new_state;
 	uint32_t state_changes;
-	uint32_t use_wakelock;
+	uint32_t use_wakeup_source;
 	int ret;
 	unsigned long flags;
 
@@ -2981,9 +2978,9 @@ void notify_smsm_cb_clients_worker(struct work_struct *work)
 		}
 
 		/* read wakelock flag */
-		ret = kfifo_out(&smsm_snapshot_fifo, &use_wakelock,
-				sizeof(use_wakelock));
-		if (ret != sizeof(use_wakelock)) {
+		ret = kfifo_out(&smsm_snapshot_fifo, &use_wakeup_source,
+				sizeof(use_wakeup_source));
+		if (ret != sizeof(use_wakeup_source)) {
 			pr_err("%s: snapshot underflow %d\n",
 				__func__, ret);
 			mutex_unlock(&smsm_lock);
@@ -2991,14 +2988,14 @@ void notify_smsm_cb_clients_worker(struct work_struct *work)
 		}
 		mutex_unlock(&smsm_lock);
 
-		if (use_wakelock) {
+		if (use_wakeup_source) {
 			spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 			if (smsm_snapshot_count) {
 				--smsm_snapshot_count;
 				if (smsm_snapshot_count == 0) {
 					SMx_POWER_INFO("SMSM snapshot"
 						   " wake unlock\n");
-					wake_unlock(&smsm_snapshot_wakelock);
+					__pm_relax(&smsm_snapshot_ws);
 				}
 			} else {
 				pr_err("%s: invalid snapshot count\n",
@@ -3587,6 +3584,11 @@ static int restart_notifier_cb(struct notifier_block *this,
 				  unsigned long code,
 				  void *data)
 {
+	/*
+	 * Some SMD or SMSM clients assume SMD/SMSM SSR handling will be
+	 * done in the AFTER_SHUTDOWN level.  If this ever changes, extra
+	 * care should be taken to verify no clients are broken.
+	 */
 	if (code == SUBSYS_AFTER_SHUTDOWN) {
 		struct restart_notifier_block *notifier;
 

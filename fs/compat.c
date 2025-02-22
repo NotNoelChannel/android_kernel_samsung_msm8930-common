@@ -401,12 +401,28 @@ static int put_compat_flock64(struct flock *kfl, struct compat_flock64 __user *u
 }
 #endif
 
+static unsigned int
+convert_fcntl_cmd(unsigned int cmd)
+{
+	switch (cmd) {
+	case F_GETLK64:
+		return F_GETLK;
+	case F_SETLK64:
+		return F_SETLK;
+	case F_SETLKW64:
+		return F_SETLKW;
+	}
+
+	return cmd;
+}
+
 asmlinkage long compat_sys_fcntl64(unsigned int fd, unsigned int cmd,
 		unsigned long arg)
 {
 	mm_segment_t old_fs;
 	struct flock f;
 	long ret;
+	unsigned int conv_cmd;
 
 	switch (cmd) {
 	case F_GETLK:
@@ -443,16 +459,18 @@ asmlinkage long compat_sys_fcntl64(unsigned int fd, unsigned int cmd,
 	case F_GETLK64:
 	case F_SETLK64:
 	case F_SETLKW64:
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
 		ret = get_compat_flock64(&f, compat_ptr(arg));
 		if (ret != 0)
 			break;
 		old_fs = get_fs();
 		set_fs(KERNEL_DS);
-		ret = sys_fcntl(fd, (cmd == F_GETLK64) ? F_GETLK :
-				((cmd == F_SETLK64) ? F_SETLK : F_SETLKW),
-				(unsigned long)&f);
+		conv_cmd = convert_fcntl_cmd(cmd);
+		ret = sys_fcntl(fd, conv_cmd, (unsigned long)&f);
 		set_fs(old_fs);
-		if (cmd == F_GETLK64 && ret == 0) {
+		if ((conv_cmd == F_GETLK || conv_cmd == F_OFD_GETLK) && ret == 0) {
 			/* need to return lock information - see above for commentary */
 			if (f.l_start > COMPAT_LOFF_T_MAX)
 				ret = -EOVERFLOW;
@@ -473,8 +491,15 @@ asmlinkage long compat_sys_fcntl64(unsigned int fd, unsigned int cmd,
 asmlinkage long compat_sys_fcntl(unsigned int fd, unsigned int cmd,
 		unsigned long arg)
 {
-	if ((cmd == F_GETLK64) || (cmd == F_SETLK64) || (cmd == F_SETLKW64))
+	switch (cmd) {
+	case F_GETLK64:
+	case F_SETLK64:
+	case F_SETLKW64:
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
 		return -EINVAL;
+	}
 	return compat_sys_fcntl64(fd, cmd, arg);
 }
 
@@ -780,16 +805,16 @@ asmlinkage long compat_sys_mount(const char __user * dev_name,
 	char *kernel_type;
 	unsigned long data_page;
 	char *kernel_dev;
-	char *dir_page;
+	struct filename *dir;
 	int retval;
 
 	retval = copy_mount_string(type, &kernel_type);
 	if (retval < 0)
 		goto out;
 
-	dir_page = getname(dir_name);
-	retval = PTR_ERR(dir_page);
-	if (IS_ERR(dir_page))
+	dir = getname(dir_name);
+	retval = PTR_ERR(dir);
+	if (IS_ERR(dir))
 		goto out1;
 
 	retval = copy_mount_string(dev_name, &kernel_dev);
@@ -811,7 +836,7 @@ asmlinkage long compat_sys_mount(const char __user * dev_name,
 		}
 	}
 
-	retval = do_mount(kernel_dev, dir_page, kernel_type,
+	retval = do_mount(kernel_dev, dir->name, kernel_type,
 			flags, (void*)data_page);
 
  out4:
@@ -819,7 +844,7 @@ asmlinkage long compat_sys_mount(const char __user * dev_name,
  out3:
 	kfree(kernel_dev);
  out2:
-	putname(dir_page);
+	putname(dir);
  out1:
 	kfree(kernel_type);
  out:
@@ -1756,47 +1781,6 @@ asmlinkage long compat_sys_signalfd(int ufd,
 	return compat_sys_signalfd4(ufd, sigmask, sigsetsize, 0);
 }
 #endif /* CONFIG_SIGNALFD */
-
-#ifdef CONFIG_TIMERFD
-
-asmlinkage long compat_sys_timerfd_settime(int ufd, int flags,
-				   const struct compat_itimerspec __user *utmr,
-				   struct compat_itimerspec __user *otmr)
-{
-	int error;
-	struct itimerspec t;
-	struct itimerspec __user *ut;
-
-	if (get_compat_itimerspec(&t, utmr))
-		return -EFAULT;
-	ut = compat_alloc_user_space(2 * sizeof(struct itimerspec));
-	if (copy_to_user(&ut[0], &t, sizeof(t)))
-		return -EFAULT;
-	error = sys_timerfd_settime(ufd, flags, &ut[0], &ut[1]);
-	if (!error && otmr)
-		error = (copy_from_user(&t, &ut[1], sizeof(struct itimerspec)) ||
-			 put_compat_itimerspec(otmr, &t)) ? -EFAULT: 0;
-
-	return error;
-}
-
-asmlinkage long compat_sys_timerfd_gettime(int ufd,
-				   struct compat_itimerspec __user *otmr)
-{
-	int error;
-	struct itimerspec t;
-	struct itimerspec __user *ut;
-
-	ut = compat_alloc_user_space(sizeof(struct itimerspec));
-	error = sys_timerfd_gettime(ufd, ut);
-	if (!error)
-		error = (copy_from_user(&t, ut, sizeof(struct itimerspec)) ||
-			 put_compat_itimerspec(otmr, &t)) ? -EFAULT: 0;
-
-	return error;
-}
-
-#endif /* CONFIG_TIMERFD */
 
 #ifdef CONFIG_FHANDLE
 /*

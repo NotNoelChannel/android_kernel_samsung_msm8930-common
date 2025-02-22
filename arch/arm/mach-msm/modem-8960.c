@@ -149,15 +149,6 @@ static struct ramdump_segment smem_segments[] = {
 	{0x80000000, 0x00200000},
 };
 
-#ifdef CONFIG_SEC_SSR_DUMP
-/* Defining the kernel ramdump address and its Size */
-static struct ramdump_segment kernel_log_segments[] = {
-        {0x88B00008, 0x00080000},
-};
-/* Declaring the kernel ramdump device */
-static void *kernel_log_ramdump_dev;
-#endif
-
 static void *modemfw_ramdump_dev;
 static void *modemsw_ramdump_dev;
 static void *smem_ramdump_dev;
@@ -323,7 +314,7 @@ static int __init modem_8960_init(void)
 	if (ret < 0) {
 		pr_err("%s: Unable to request q6fw watchdog IRQ. (%d)\n",
 				__func__, ret);
-		goto irq_err;
+		goto out;
 	}
 
 	ret = request_irq(Q6SW_WDOG_EXPIRED_IRQ, modem_wdog_bite_irq,
@@ -333,7 +324,7 @@ static int __init modem_8960_init(void)
 		pr_err("%s: Unable to request q6sw watchdog IRQ. (%d)\n",
 				__func__, ret);
 		disable_irq_nosync(Q6FW_WDOG_EXPIRED_IRQ);
-		goto free_irq_Q6FW;
+		goto out;
 	}
 
 	ret = modem_subsystem_restart_init();
@@ -341,7 +332,7 @@ static int __init modem_8960_init(void)
 	if (ret < 0) {
 		pr_err("%s: Unable to reg with subsystem restart. (%d)\n",
 				__func__, ret);
-		goto free_irq_Q6SW;
+		goto out;
 	}
 
 	modemfw_ramdump_dev = create_ramdump_device("modem_fw");
@@ -350,7 +341,7 @@ static int __init modem_8960_init(void)
 		pr_err("%s: Unable to create modem fw ramdump device. (%d)\n",
 				__func__, -ENOMEM);
 		ret = -ENOMEM;
-		goto free_irq_Q6SW;
+		goto out;
 	}
 
 	modemsw_ramdump_dev = create_ramdump_device("modem_sw");
@@ -359,7 +350,7 @@ static int __init modem_8960_init(void)
 		pr_err("%s: Unable to create modem sw ramdump device. (%d)\n",
 				__func__, -ENOMEM);
 		ret = -ENOMEM;
-		goto free_irq_Q6SW;
+		goto out;
 	}
 
 	smem_ramdump_dev = create_ramdump_device("smem-modem");
@@ -368,24 +359,13 @@ static int __init modem_8960_init(void)
 		pr_err("%s: Unable to create smem ramdump device. (%d)\n",
 				__func__, -ENOMEM);
 		ret = -ENOMEM;
-		goto free_irq_Q6SW;
+		goto out;
 	}
 
 	ret = modem_debugfs_init();
 
 	pr_info("%s: modem fatal driver init'ed.\n", __func__);
-	return ret;
-
-free_irq_Q6SW:
-	free_irq(Q6SW_WDOG_EXPIRED_IRQ, NULL);
-
-free_irq_Q6FW:
-	free_irq(Q6FW_WDOG_EXPIRED_IRQ, NULL);
-
-irq_err:
-
-	smsm_state_cb_deregister(SMSM_MODEM_STATE, SMSM_RESET,
-			smsm_state_cb, 0);
+out:
 	return ret;
 }
 

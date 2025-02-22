@@ -65,6 +65,7 @@ struct page *ecryptfs_get_locked_page(struct inode *inode, loff_t index)
 static int ecryptfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int rc;
+
 	rc = ecryptfs_encrypt_page(page);
 	if (rc) {
 		ecryptfs_printk(KERN_WARNING, "Error encrypting "
@@ -518,7 +519,6 @@ static int ecryptfs_write_end(struct file *file,
 			(unsigned long long)i_size_read(ecryptfs_inode));
 	}
 	rc = ecryptfs_write_inode_size_to_metadata(ecryptfs_inode);
-
 	if (rc)
 		printk(KERN_ERR "Error writing inode size to metadata; "
 		       "rc = [%d]\n", rc);

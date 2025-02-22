@@ -2,7 +2,7 @@
  * drivers/gpu/ion/ion_cp_heap.c
  *
  * Copyright (C) 2011 Google, Inc.
- * Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -108,7 +108,7 @@ enum {
 	HEAP_PROTECTED = 1,
 };
 
-#define DMA_ALLOC_RETRIES	100
+#define DMA_ALLOC_RETRIES	5
 
 static int ion_cp_protect_mem(unsigned int phy_base, unsigned int size,
 			unsigned int permission_type, int version,
@@ -724,7 +724,7 @@ int ion_cp_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 		}
 	}
 
-	if (outer_cache_op && cp_heap->has_outer_cache) {
+	if (cp_heap->has_outer_cache) {
 		unsigned long pstart = buffer->priv_phys + offset;
 		outer_cache_op(pstart, pstart + length);
 	}

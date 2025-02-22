@@ -174,4 +174,3 @@ struct sec_fg_info {
 
 #endif /* __MAX17050_FUELGAUGE_H */
 
->>>>>>> cf790336d6934... max17050_fuelgauge: Migrate to alarmtimer interface

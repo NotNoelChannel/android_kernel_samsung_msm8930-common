@@ -41,13 +41,6 @@
 #ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
 #include "wcnss_prealloc.h"
 #endif
-#if defined(CONFIG_MACH_MELIUS_SKT) || defined(CONFIG_MACH_MELIUS_KTT) || \
-	defined(CONFIG_MACH_MELIUS_LGT)
-#if !defined(CONFIG_RADIO_IRIS) && defined(CONFIG_IR_REMOCON_FPGA)
-/* workaround about conflict with qualcomm FM radio gpio */
-#include <mach/msm8930-gpio.h>
-#endif
-#endif
 
 #define DEVICE "wcnss_wlan"
 #define CTRL_DEVICE "wcnss_ctrl"
@@ -516,17 +509,6 @@ static void wcnss_post_bootup(struct work_struct *work)
 	/* Since Riva is up, cancel any APPS vote for Iris & Riva VREGs  */
 	wcnss_wlan_power(&penv->pdev->dev, &penv->wlan_config,
 		WCNSS_WLAN_SWITCH_OFF);
-
-#if defined(CONFIG_MACH_MELIUS_SKT) || defined(CONFIG_MACH_MELIUS_KTT) || \
-	defined(CONFIG_MACH_MELIUS_LGT)
-#if !defined(CONFIG_RADIO_IRIS) && defined(CONFIG_IR_REMOCON_FPGA)
-	/* workaround about conflict with qualcomm FM radio gpio */
-	gpio_tlmm_config(GPIO_CFG(GPIO_IRDA_SDA, 0,
-		GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 1);
-	gpio_tlmm_config(GPIO_CFG(GPIO_IRDA_SCL, 0,
-		GPIO_CFG_INPUT,	GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 1);
-#endif
-#endif
 }
 
 static int
@@ -644,6 +626,12 @@ struct device *wcnss_wlan_get_device(void)
 	return NULL;
 }
 EXPORT_SYMBOL(wcnss_wlan_get_device);
+
+void wcnss_get_monotonic_boottime(struct timespec *ts)
+{
+	get_monotonic_boottime(ts);
+}
+EXPORT_SYMBOL(wcnss_get_monotonic_boottime);
 
 struct platform_device *wcnss_get_platform_device(void)
 {
@@ -1866,13 +1854,6 @@ static void __exit wcnss_wlan_exit(void)
 	wcnss_prealloc_deinit();
 #endif
 }
-
-static unsigned char prealloc_mac_mem[32*1024];
-void* wcnss_get_prealloc_mac_context(void)
-{
-	return prealloc_mac_mem;
-}
-EXPORT_SYMBOL(wcnss_get_prealloc_mac_context);
 
 module_init(wcnss_wlan_init);
 module_exit(wcnss_wlan_exit);

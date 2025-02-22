@@ -139,30 +139,21 @@ static int __devinit msm_ebi_erp_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, drvdata);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!r) {
-		devm_kfree(&pdev->dev, drvdata);
+	if (!r)
 		return -EINVAL;
-	}
 
 	drvdata->base = devm_ioremap(&pdev->dev, r->start, resource_size(r));
-	if (!drvdata->base) {
-		devm_kfree(&pdev->dev, drvdata);
+	if (!drvdata->base)
 		return -ENOMEM;
-	}
 
 	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		devm_kfree(&pdev->dev, drvdata);
-		devm_iounmap(&pdev->dev, drvdata->base);
+	if (irq < 0)
 		return irq;
-	}
+
 	ret = devm_request_irq(&pdev->dev, irq, msm_ebi_irq, IRQF_TRIGGER_HIGH,
 			       dev_name(&pdev->dev), drvdata);
-	if (ret) {
-		devm_kfree(&pdev->dev, drvdata);
-		devm_iounmap(&pdev->dev, drvdata->base);
+	if (ret)
 		return ret;
-	}
 
 	/* Enable the interrupt */
 	err_cntl = readl_relaxed(drvdata->base + SLV_ERR_CNTL);

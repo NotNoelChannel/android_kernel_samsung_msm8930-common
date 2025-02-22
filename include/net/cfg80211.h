@@ -3812,7 +3812,6 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
  *
  * return 0 if MCS index >= 32
  */
-
 u32 cfg80211_calculate_bitrate(struct rate_info *rate);
 
 /**

@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -513,6 +513,7 @@ static int msm_ipc_router_ioctl(struct socket *sock,
 			break;
 		}
 		server_arg.num_entries_found = ret;
+
 		ret = copy_to_user((void *)arg, &server_arg,
 				   sizeof(server_arg));
 
@@ -521,7 +522,7 @@ static int msm_ipc_router_ioctl(struct socket *sock,
 
 		if (ret == 0 && n) {
 			ret = copy_to_user((void *)(arg + sizeof(server_arg)),
-					   srv_info, n * sizeof (*srv_info));
+					   srv_info, n * sizeof(*srv_info));
 		}
 
 		if (ret)
@@ -593,17 +594,24 @@ static const struct net_proto_family msm_ipc_family_ops = {
 };
 
 static const struct proto_ops msm_ipc_proto_ops = {
-	.owner		= THIS_MODULE,
 	.family         = AF_MSM_IPC,
+	.owner		= THIS_MODULE,
+	.release        = msm_ipc_router_close,
 	.bind		= msm_ipc_router_bind,
 	.connect	= sock_no_connect,
+	.socketpair	= sock_no_socketpair,
+	.accept		= sock_no_accept,
+	.getname	= sock_no_getname,
+	.poll           = msm_ipc_router_poll,
+	.ioctl          = msm_ipc_router_ioctl,
+	.listen		= sock_no_listen,
+	.shutdown	= sock_no_shutdown,
+	.setsockopt     = sock_no_setsockopt,
+	.getsockopt     = sock_no_getsockopt,
 	.sendmsg	= msm_ipc_router_sendmsg,
 	.recvmsg	= msm_ipc_router_recvmsg,
-	.ioctl		= msm_ipc_router_ioctl,
-	.poll		= msm_ipc_router_poll,
-	.setsockopt	= sock_no_setsockopt,
-	.getsockopt	= sock_no_getsockopt,
-	.release	= msm_ipc_router_close,
+	.mmap		= sock_no_mmap,
+	.sendpage	= sock_no_sendpage,
 };
 
 static struct proto msm_ipc_proto = {

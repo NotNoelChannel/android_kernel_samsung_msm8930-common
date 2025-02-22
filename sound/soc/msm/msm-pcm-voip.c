@@ -30,7 +30,6 @@
 #include "msm-pcm-routing.h"
 #include "qdsp6/q6voice.h"
 
-#define VOIP_MIN_Q_LEN 2
 #define VOIP_MAX_Q_LEN 10
 #define VOIP_MAX_VOC_PKT_SIZE 640
 #define VOIP_MIN_VOC_PKT_SIZE 320
@@ -181,7 +180,7 @@ static struct snd_pcm_hardware msm_pcm_hardware = {
 	.buffer_bytes_max =	sizeof(struct voip_buf_node) * VOIP_MAX_Q_LEN,
 	.period_bytes_min =	VOIP_MIN_VOC_PKT_SIZE,
 	.period_bytes_max =	VOIP_MAX_VOC_PKT_SIZE,
-	.periods_min =		VOIP_MIN_Q_LEN,
+	.periods_min =		VOIP_MAX_Q_LEN,
 	.periods_max =		VOIP_MAX_Q_LEN,
 	.fifo_size =            0,
 };
@@ -274,8 +273,15 @@ static int msm_voip_fens_get(struct snd_kcontrol *kcontrol,
 static struct snd_kcontrol_new msm_voip_controls[] = {
 	SOC_SINGLE_EXT("Voip Tx Mute", SND_SOC_NOPM, 0, 1, 0,
 				msm_voip_mute_get, msm_voip_mute_put),
+#if defined(CONFIG_MACH_MELIUS_USC) || defined(CONFIG_MACH_SERRANO_USC) || \
+	defined(CONFIG_MACH_SERRANO_VZW) || defined(CONFIG_MACH_GOLDEN_VZW)
+	/* USC and VZW have 8 step volumes */
+	SOC_SINGLE_EXT("Voip Rx Volume", SND_SOC_NOPM, 0, 7, 0,
+				msm_voip_volume_get, msm_voip_volume_put),
+#else //CONFIG_MACH_MELIUS_USC CONFIG_MACH_SERRANO_USC
 	SOC_SINGLE_EXT("Voip Rx Volume", SND_SOC_NOPM, 0, 5, 0,
 				msm_voip_volume_get, msm_voip_volume_put),
+#endif
 	SOC_SINGLE_EXT("Voip Mode Config", SND_SOC_NOPM, 0, VOIP_MODE_MAX, 0,
 		       msm_voip_mode_config_get, msm_voip_mode_config_put),
 	SOC_SINGLE_EXT("Voip Rate Config", SND_SOC_NOPM, 0, VOIP_RATE_MAX, 0,

@@ -24,7 +24,6 @@
 #include <sound/pcm.h>
 #include <sound/initval.h>
 #include <sound/control.h>
-#include <sound/pcm_params.h>
 #include <asm/dma.h>
 #include <linux/dma-mapping.h>
 
@@ -45,8 +44,6 @@ struct snd_msm {
 };
 static struct snd_msm lpa_audio;
 
-static int write_done_count = 0;
-
 static struct snd_pcm_hardware msm_pcm_hardware = {
 	.info =                 (SNDRV_PCM_INFO_MMAP |
 				SNDRV_PCM_INFO_BLOCK_TRANSFER |
@@ -59,10 +56,10 @@ static struct snd_pcm_hardware msm_pcm_hardware = {
 	.rate_max =             48000,
 	.channels_min =         1,
 	.channels_max =         2,
-	.buffer_bytes_max =     4 * 32 * 1024,
+	.buffer_bytes_max =     1024 * 1024,
 /* TODO: Check on the lowest period size we can support */
-	.period_bytes_min =	32 * 1024,
-	.period_bytes_max =     32 * 1024,
+	.period_bytes_min =	128 * 1024,
+	.period_bytes_max =     256 * 1024,
 	.periods_min =          4,
 	.periods_max =          8,
 	.fifo_size =            0,
@@ -90,7 +87,6 @@ static void event_handler(uint32_t opcode,
 	struct output_meta_data_st output_meta_data;
 	unsigned long flag = 0;
 	int i = 0;
-	int stop_playback = 0;
 
 	pr_debug("%s\n", __func__);
 	memset(&output_meta_data, 0x0, sizeof(struct output_meta_data_st));
@@ -98,25 +94,14 @@ static void event_handler(uint32_t opcode,
 	switch (opcode) {
 	case ASM_DATA_EVENT_WRITE_DONE: {
 		uint32_t *ptrmem = (uint32_t *)&param;
-		write_done_count ++ ;
-		pr_info("ASM_DATA_EVENT_WRITE_DONE and write_done_count %d\n", write_done_count);
-		pr_info("Buffer Consumed = 0x%08x\n", *ptrmem);
+		pr_debug("ASM_DATA_EVENT_WRITE_DONE\n");
+		pr_debug("Buffer Consumed = 0x%08x\n", *ptrmem);
 		prtd->pcm_irq_pos += prtd->pcm_count;
-		if (prtd->pcm_irq_pos >= prtd->pcm_size)
-			prtd->pcm_irq_pos = 0;
 		if (atomic_read(&prtd->start))
-		{
-            pr_info("snd_pcm_period_elapsed");
 			snd_pcm_period_elapsed(substream);
-		}
 		else
-		{
 			if (substream->timer_running)
-			{
-				pr_info("snd_timer_interrupt");
 				snd_timer_interrupt(substream->timer, 1);
-			}
-		}
 
 		atomic_inc(&prtd->out_count);
 		wake_up(&the_locks.write_wait);
@@ -127,15 +112,10 @@ static void event_handler(uint32_t opcode,
 			atomic_set(&prtd->pending_buffer, 0);
 
 		buf = prtd->audio_client->port[IN].buf;
-		snd_pcm_stream_lock_irq(substream);
 		if (runtime->status->hw_ptr >= runtime->control->appl_ptr) {
 			runtime->render_flag |= SNDRV_RENDER_STOPPED;
-			stop_playback = 1;
-		}
-		snd_pcm_stream_unlock_irq(substream);
-		if (stop_playback) {
-		    	atomic_set(&prtd->pending_buffer, 1);
-			pr_err("underrun! render stopped\n");
+			atomic_set(&prtd->pending_buffer, 1);
+			pr_debug("%s:lpa driver underrun\n", __func__);
 			break;
 		}
 
@@ -497,7 +477,6 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 	To issue EOS to dsp, we need to be run state otherwise
 	EOS is not honored.
 	*/
-	write_done_count = 0;
 	if (msm_routing_check_backend_enabled(soc_prtd->dai_link->be_id) &&
 		(!atomic_read(&prtd->stop))) {
 		rc = q6asm_run(prtd->audio_client, 0, 0, 0);
@@ -555,6 +534,9 @@ static snd_pcm_uframes_t msm_pcm_pointer(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct msm_audio *prtd = runtime->private_data;
 
+	if (prtd->pcm_irq_pos >= prtd->pcm_size)
+		prtd->pcm_irq_pos = 0;
+
 	pr_debug("%s: pcm_irq_pos = %d\n", __func__, prtd->pcm_irq_pos);
 	return bytes_to_frames(runtime, (prtd->pcm_irq_pos));
 }
@@ -598,8 +580,8 @@ static int msm_pcm_hw_params(struct snd_pcm_substream *substream,
 		return -EPERM;
 	ret = q6asm_audio_client_buf_alloc_contiguous(dir,
 			prtd->audio_client,
-			params_period_bytes(params),
-			params_periods(params));
+			runtime->hw.period_bytes_min,
+			runtime->hw.periods_max);
 	if (ret < 0) {
 		pr_err("Audio Start: Buffer Allocation failed \
 					rc = %d\n", ret);
@@ -616,7 +598,7 @@ static int msm_pcm_hw_params(struct snd_pcm_substream *substream,
 	dma_buf->private_data = NULL;
 	dma_buf->area = buf[0].data;
 	dma_buf->addr =  buf[0].phys;
-	dma_buf->bytes = params_period_bytes(params) * params_periods(params);
+	dma_buf->bytes = runtime->hw.buffer_bytes_max;
 	if (!dma_buf->area)
 		return -ENOMEM;
 

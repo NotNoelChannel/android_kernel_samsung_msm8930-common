@@ -56,6 +56,11 @@ int gAE_OFSETVAL = AE_OFSETVAL, gAE_MAXDIFF = AE_MAXDIFF;
 #define ISX012_BURST_WRITE_LIST(A)	\
 	isx012_i2c_burst_write_list(A, (sizeof(A) / sizeof(A[0])), #A)
 #endif
+
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+static bool g_bPreFlash;
+#endif
+
 static int isx012_set_af_stop(int af_check);
 
 /**
@@ -1602,6 +1607,10 @@ static void isx012_set_af_mode(int mode)
 
 static int isx012_set_af_stop(int af_check)
 {
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	short unsigned int r_data[1] = {0};
+#endif
+
 	CAM_DEBUG(" %d", af_check);
 
 	if (af_check == 1) {
@@ -1624,6 +1633,14 @@ static int isx012_set_af_stop(int af_check)
 			isx012_i2c_write_multi(0x0282, 0x20, 0x01);
 		}
 		isx012_i2c_write_multi(0x8800, 0x01, 0x01);
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	} else {
+	isx012_i2c_read(0x0308, r_data);
+
+		/* 0x11: Normal preview AE, 0x12: Flash AE */
+		if ((r_data[0] & 0xFF) != 0x11)
+			ISX012_BURST_WRITE_LIST(isx012_Flash_OFF);
+#endif
 	}
 
 	isx012_set_af_mode(isx012_ctrl->settings.focus_mode);
@@ -1731,11 +1748,35 @@ FAIL_END:
 static int isx012_set_capture(void)
 {
 	int ret = 0;
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	bool bCaptureFlash = 0;
+#endif
 
 	CAM_DEBUG(" E");
 
 	ISX012_WRITE_LIST(isx012_Capture_SizeSetting);
 
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	if (((isx012_ctrl->flash_mode == CAMERA_FLASH_AUTO)
+		&& (isx012_ctrl->lowLight))
+		|| (isx012_ctrl->flash_mode == CAMERA_FLASH_ON))
+		bCaptureFlash = 1;
+	else
+		bCaptureFlash = 0;
+
+	if (g_bPreFlash != bCaptureFlash) {
+		CAM_DEBUG(" preFlash and Full Flash mode are not same. "
+					"Fast AE, AWB");
+		if (bCaptureFlash)
+			isx012_set_flash(CAPTURE_FLASH);
+
+		isx012_i2c_write_multi(0x0181, 0x01, 0x01);
+		isx012_i2c_write_multi(0x00B2, 0x03, 0x01);
+		isx012_i2c_write_multi(0x00B3, 0x03, 0x01);
+		isx012_i2c_write_multi(0x0081, 0x01, 0x01);
+
+	} else {
+#endif
 	if (((isx012_ctrl->flash_mode == CAMERA_FLASH_AUTO)
 		&& (isx012_ctrl->lowLight))
 		|| (isx012_ctrl->flash_mode == CAMERA_FLASH_ON)) {
@@ -1752,6 +1793,9 @@ static int isx012_set_capture(void)
 		}
 		isx012_set_flash(CAPTURE_FLASH);
 	}
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	}
+#endif
 
 	if ((isx012_ctrl->settings.scenemode == CAMERA_SCENE_NIGHT)
 	    && (isx012_ctrl->lowLight))
@@ -2178,6 +2222,9 @@ static void isx012_set_af_status(int status)
 	short unsigned int r_data[1] = { 0 };
 	uint16_t ae_data[1] = { 0 };
 	int16_t ersc_data[1] = { 0 };
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+	g_bPreFlash = 0;
+#endif
 
 	if (status) {		/* start AF */
 		CAM_DEBUG(" START AF (mode = %s)",
@@ -2222,6 +2269,9 @@ static void isx012_set_af_status(int status)
 			msleep(40);
 
 			isx012_set_flash(MOVIE_FLASH);
+#if defined(CONFIG_MACH_GOLDEN_ATT)
+			g_bPreFlash = 1;
+#endif
 
 			do {
 				isx012_i2c_read(0x0080, r_data);

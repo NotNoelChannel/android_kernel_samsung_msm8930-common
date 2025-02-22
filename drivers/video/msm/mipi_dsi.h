@@ -16,9 +16,13 @@
 
 #include <mach/scm-io.h>
 #include <linux/list.h>
-
 #include "msm_fb_def.h"
 #include "msm_fb.h"
+
+#if defined(CONFIG_ESD_ERR_FG_RECOVERY)
+#include "mdnie_lite_tuning.h"
+#endif
+
 #ifdef BIT
 #undef BIT
 #endif
@@ -54,8 +58,8 @@
 #define MIPI_DSI_PANEL_WXGA	6
 #define MIPI_DSI_PANEL_WUXGA	7
 #define MIPI_DSI_PANEL_720P_PT	8
-#define MIPI_DSI_PANEL_FULL_HD_PT 9
-#define DSI_PANEL_MAX	8
+#define MIPI_DSI_PANEL_FULL_HD_PT	9
+#define DSI_PANEL_MAX	9
 
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
@@ -86,6 +90,7 @@ enum dsi_trigger_type {
 	DSI_CMD_MODE_DMA,
 	DSI_CMD_MODE_MDP,
 };
+
 
 #define DSI_NON_BURST_SYNCH_PULSE	0
 #define DSI_NON_BURST_SYNCH_EVENT	1
@@ -288,6 +293,14 @@ struct dcs_cmd_list {
 	struct dcs_cmd_req list[CMD_REQ_MAX];
 };
 
+struct mdp4_overlay_perf {
+	u32 mdp_clk_rate;
+	u32 use_ov0_blt;
+	u32 use_ov1_blt;
+	u32 mdp_bw;
+};
+
+extern struct mdp4_overlay_perf perf_current;
 
 char *mipi_dsi_buf_reserve_hdr(struct dsi_buf *dp, int hlen);
 char *mipi_dsi_buf_init(struct dsi_buf *dp);
@@ -297,17 +310,14 @@ void mipi_dsi_bist_ctrl(void);
 int mipi_dsi_buf_alloc(struct dsi_buf *, int size);
 int mipi_dsi_cmd_dma_add(struct dsi_buf *dp, struct dsi_cmd_desc *cm);
 int mipi_dsi_cmds_tx(struct dsi_buf *dp, struct dsi_cmd_desc *cmds, int cnt);
-int mipi_dsi_cmds_single_tx(struct dsi_buf *dp, struct dsi_cmd_desc *cmds, int cnt);
+int mipi_dsi_cmds_single_tx(struct dsi_buf *dp, struct dsi_cmd_desc *cmds,
+								int cnt);
 
 int mipi_dsi_cmd_dma_tx(struct dsi_buf *dp);
 int mipi_dsi_cmd_reg_tx(uint32 data);
 int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 			struct dsi_buf *tp, struct dsi_buf *rp,
 			struct dsi_cmd_desc *cmds, int len);
-int mipi_dsi_cmds_rx_lp(struct msm_fb_data_type *mfd,
-			struct dsi_buf *tp, struct dsi_buf *rp,
-			char *cmds, int rlen);
-
 int mipi_dsi_cmd_dma_rx(struct dsi_buf *tp, int rlen);
 void mipi_dsi_host_init(struct mipi_panel_info *pinfo);
 void mipi_dsi_op_mode_config(int mode);
@@ -333,6 +343,11 @@ void mipi_dsi_sw_reset(void);
 void mipi_dsi_mdp_busy_wait(void);
 
 irqreturn_t mipi_dsi_isr(int irq, void *ptr);
+
+enum {
+	HS_TX_MODE,
+	LP_TX_MODE,
+};
 
 void mipi_set_tx_power_mode(int mode);
 void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
@@ -393,7 +408,9 @@ void mipi_dsi_wait4video_done(void);
 void update_lane_config(struct msm_panel_info *pinfo);
 #endif
 
-#if defined(CONFIG_RUNTIME_MIPI_CLK_CHANGE)
+#define RUMTIME_MIPI_CLK_CHANGE
+
+#if defined(RUMTIME_MIPI_CLK_CHANGE)
 int mipi_runtime_clk_change(int fps);
 void mipi_dsi_configure_dividers(int fps);
 #endif
@@ -404,4 +421,5 @@ void mdp4_dsi_video_wait4dmap_for_dsi(int cndx);
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 void esd_recovery(void);
 #endif
+
 #endif /* MIPI_DSI_H */

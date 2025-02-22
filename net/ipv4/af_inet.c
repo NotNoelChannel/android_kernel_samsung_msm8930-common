@@ -115,7 +115,6 @@
 #include <net/inet_common.h>
 #include <net/xfrm.h>
 #include <net/net_namespace.h>
-#include <net/secure_seq.h>
 #ifdef CONFIG_IP_MROUTE
 #include <linux/mroute.h>
 #endif
@@ -295,9 +294,6 @@ static int inet_create(struct net *net, struct socket *sock, int protocol,
 	int try_loading_module = 0;
 	int err;
 
-	if (protocol < 0 || protocol >= IPPROTO_MAX)
-		return -EINVAL;
-
 	if (!current_has_network())
 		return -EACCES;
 
@@ -356,7 +352,8 @@ lookup_protocol:
 	}
 
 	err = -EPERM;
-	if (sock->type == SOCK_RAW && !kern && !capable(CAP_NET_RAW))
+	if (sock->type == SOCK_RAW && !kern &&
+	    !ns_capable(net->user_ns, CAP_NET_RAW))
 		goto out_rcu_unlock;
 
 	err = -EAFNOSUPPORT;

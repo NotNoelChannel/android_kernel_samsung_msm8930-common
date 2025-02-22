@@ -48,6 +48,8 @@ struct inet_diag_entry {
 	struct in6_addr saddr_storage;	/* for IPv4-mapped-IPv6 addresses */
 	struct in6_addr daddr_storage;	/* for IPv4-mapped-IPv6 addresses */
 #endif
+	u32 ifindex;
+	u32 mark;
 };
 
 #define INET_DIAG_PUT(skb, attrtype, attrlen) \
@@ -116,6 +118,9 @@ int inet_sk_diag_fill(struct sock *sk, struct inet_connection_sock *icsk,
 
 	r->id.idiag_src[0] = inet->inet_rcv_saddr;
 	r->id.idiag_dst[0] = inet->inet_daddr;
+
+	if (nla_put_u8(skb, INET_DIAG_SHUTDOWN, sk->sk_shutdown))
+		goto out;
 
 	/* IPv6 dual-stack sockets use inet->tos for IPv4 connections,
 	 * hence this needs to be included regardless of socket family.
@@ -490,6 +495,22 @@ static int inet_diag_bc_run(const struct nlattr *_bc,
 			yes = 0;
 			break;
 		}
+		case INET_DIAG_BC_DEV_COND: {
+			u32 ifindex;
+
+			ifindex = *((const u32 *)(op + 1));
+			if (ifindex != entry->ifindex)
+				yes = 0;
+			break;
+		}
+		case INET_DIAG_BC_MARK_COND: {
+			struct inet_diag_markcond *cond;
+
+			cond = (struct inet_diag_markcond *)(op + 1);
+			if ((entry->mark & cond->mask) != cond->mark)
+				yes = 0;
+			break;
+		}
 		}
 
 		if (yes) {
@@ -526,7 +547,9 @@ int inet_diag_bc_sk(const struct nlattr *bc, struct sock *sk)
 	}
 	entry.sport = inet->inet_num;
 	entry.dport = ntohs(inet->inet_dport);
+	entry.ifindex = sk->sk_bound_dev_if;
 	entry.userlocks = sk->sk_userlocks;
+	entry.mark = sk->sk_mark;
 
 	return inet_diag_bc_run(bc, &entry);
 }
@@ -549,6 +572,17 @@ static int valid_cc(const void *bc, int len, int cc)
 	return 0;
 }
 
+/* data is u32 ifindex */
+static bool valid_devcond(const struct inet_diag_bc_op *op, int len,
+			  int *min_len)
+{
+	/* Check ifindex space. */
+	*min_len += sizeof(u32);
+	if (len < *min_len)
+		return false;
+
+	return true;
+}
 /* Validate an inet_diag_hostcond. */
 static bool valid_hostcond(const struct inet_diag_bc_op *op, int len,
 			   int *min_len)
@@ -598,10 +632,25 @@ static inline bool valid_port_comparison(const struct inet_diag_bc_op *op,
 	return true;
 }
 
-static int inet_diag_bc_audit(const void *bytecode, int bytecode_len)
+static bool valid_markcond(const struct inet_diag_bc_op *op, int len,
+			   int *min_len)
 {
-	const void *bc = bytecode;
-	int  len = bytecode_len;
+	*min_len += sizeof(struct inet_diag_markcond);
+	return len >= *min_len;
+}
+
+static int inet_diag_bc_audit(const struct nlattr *attr,
+			      const struct sk_buff *skb)
+{
+	bool net_admin = ns_capable(sock_net(skb->sk)->user_ns, CAP_NET_ADMIN);
+	const void *bytecode, *bc;
+	int bytecode_len, len;
+
+	if (!attr || nla_len(attr) < sizeof(struct inet_diag_bc_op))
+		return -EINVAL;
+
+	bytecode = bc = nla_data(attr);
+	len = bytecode_len = nla_len(attr);
 
 	while (len > 0) {
 		const struct inet_diag_bc_op *op = bc;
@@ -614,11 +663,21 @@ static int inet_diag_bc_audit(const void *bytecode, int bytecode_len)
 			if (!valid_hostcond(bc, len, &min_len))
 				return -EINVAL;
 			break;
+		case INET_DIAG_BC_DEV_COND:
+			if (!valid_devcond(bc, len, &min_len))
+				return -EINVAL;
+			break;
 		case INET_DIAG_BC_S_GE:
 		case INET_DIAG_BC_S_LE:
 		case INET_DIAG_BC_D_GE:
 		case INET_DIAG_BC_D_LE:
 			if (!valid_port_comparison(bc, len, &min_len))
+				return -EINVAL;
+			break;
+		case INET_DIAG_BC_MARK_COND:
+			if (!net_admin)
+				return -EPERM;
+			if (!valid_markcond(bc, len, &min_len))
 				return -EINVAL;
 			break;
 		case INET_DIAG_BC_AUTO:
@@ -684,6 +743,7 @@ static int inet_twsk_diag_dump(struct inet_timewait_sock *tw,
 		entry.sport = tw->tw_num;
 		entry.dport = ntohs(tw->tw_dport);
 		entry.userlocks = 0;
+		entry.mark = 0;
 
 		if (!inet_diag_bc_run(bc, &entry))
 			return 0;
@@ -812,6 +872,7 @@ static int inet_diag_dump_reqs(struct sk_buff *skb, struct sock *sk,
 	if (bc != NULL) {
 		entry.sport = inet->inet_num;
 		entry.userlocks = sk->sk_userlocks;
+		entry.mark = sk->sk_mark;
 	}
 
 	for (j = s_j; j < lopt->nr_table_entries; j++) {
@@ -1091,13 +1152,13 @@ static int inet_diag_rcv_msg_compat(struct sk_buff *skb, struct nlmsghdr *nlh)
 	if (nlh->nlmsg_flags & NLM_F_DUMP) {
 		if (nlmsg_attrlen(nlh, hdrlen)) {
 			struct nlattr *attr;
+			int err;
 
 			attr = nlmsg_find_attr(nlh, hdrlen,
 					       INET_DIAG_REQ_BYTECODE);
-			if (attr == NULL ||
-			    nla_len(attr) < sizeof(struct inet_diag_bc_op) ||
-			    inet_diag_bc_audit(nla_data(attr), nla_len(attr)))
-				return -EINVAL;
+			err = inet_diag_bc_audit(attr, skb);
+			if (err)
+				return err;
 		}
 		{
 			struct netlink_dump_control c = {
@@ -1121,12 +1182,13 @@ static int inet_diag_handler_cmd(struct sk_buff *skb, struct nlmsghdr *h)
 	    h->nlmsg_flags & NLM_F_DUMP) {
 		if (nlmsg_attrlen(h, hdrlen)) {
 			struct nlattr *attr;
+			int err;
+
 			attr = nlmsg_find_attr(h, hdrlen,
 					       INET_DIAG_REQ_BYTECODE);
-			if (attr == NULL ||
-			    nla_len(attr) < sizeof(struct inet_diag_bc_op) ||
-			    inet_diag_bc_audit(nla_data(attr), nla_len(attr)))
-				return -EINVAL;
+			err = inet_diag_bc_audit(attr, skb);
+			if (err)
+				return err;
 		}
 		{
 			struct netlink_dump_control c = {

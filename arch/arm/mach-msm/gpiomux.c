@@ -14,8 +14,6 @@
 #include <linux/spinlock.h>
 #include <mach/gpiomux.h>
 
-#include <linux/gpio.h>
-#include <mach/irqs.h>
 struct msm_gpiomux_rec {
 	struct gpiomux_setting *sets[GPIOMUX_NSETTINGS];
 	int ref;
@@ -104,79 +102,6 @@ int msm_gpiomux_put(unsigned gpio)
 	return 0;
 }
 EXPORT_SYMBOL(msm_gpiomux_put);
-
-static const char * const gpiomux_drv_str[] = {
-	"DRV_2mA",
-	"DRV_4mA",
-	"DRV_6mA",
-	"DRV_8mA",
-	"DRV_10mA",
-	"DRV_12mA",
-	"DRV_14mA",
-	"DRV_16mA",
-};
-
-static const char * const gpiomux_func_str[] = {
-	"GPIO",
-	"Func_1",
-	"Func_2",
-	"Func_3",
-	"Func_4",
-	"Func_5",
-	"Func_6",
-	"Func_7",
-	"Func_8",
-	"Func_9",
-	"Func_a",
-	"Func_b",
-	"Func_c",
-	"Func_d",
-	"Func_e",
-	"Func_f",
-};
-
-static const char * const gpiomux_pull_str[] = {
-	"PULL_NONE",
-	"PULL_DOWN",
-	"PULL_KEEPER",
-	"PULL_UP",
-};
-
-static const char * const gpiomux_dir_str[] = {
-	"IN",
-	"OUT_HIGH",
-	"OUT_LOW",
-};
-
-static const char * const gpiomux_val_str[] = {
-	"VAL_LOW",
-	"VAL_HIGH",
-};
-
-
-void msm_gpio_print_enabled(void)
-{
-	unsigned long flags;
-	struct gpiomux_setting set;
-	unsigned val = 0;
-	unsigned gpio;
-	unsigned begin = 0;
-
-	spin_lock_irqsave(&gpiomux_lock, flags);
-
-	for (gpio = begin; gpio < NR_GPIO_IRQS; ++gpio) {
-		msm_gpiomux_read(gpio, &set);
-		val = gpio_get_value(gpio);
-		printk(KERN_INFO"GPIO[%u] \t%s \t%s \t%s \t%s \t%s\n", gpio,
-			gpiomux_func_str[set.func],
-			gpiomux_dir_str[set.dir],
-			gpiomux_pull_str[set.pull],
-			gpiomux_drv_str[set.drv],
-			gpiomux_val_str[val]);
-	}
-
-	spin_unlock_irqrestore(&gpiomux_lock, flags);
-}
 
 int msm_gpiomux_init(size_t ngpio)
 {

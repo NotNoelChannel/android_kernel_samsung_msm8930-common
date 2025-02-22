@@ -758,8 +758,6 @@ MMC_DEV_ATTR(manfid, "0x%06x\n", card->cid.manfid);
 MMC_DEV_ATTR(name, "%s\n", card->cid.prod_name);
 MMC_DEV_ATTR(oemid, "0x%04x\n", card->cid.oemid);
 MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
-MMC_DEV_ATTR(caps, "0x%08x\n", (unsigned int)(card->host->caps));
-MMC_DEV_ATTR(caps2, "0x%08x\n", card->host->caps2);
 
 
 static struct attribute *sd_std_attrs[] = {
@@ -775,8 +773,6 @@ static struct attribute *sd_std_attrs[] = {
 	&dev_attr_name.attr,
 	&dev_attr_oemid.attr,
 	&dev_attr_serial.attr,
-	&dev_attr_caps.attr,
-	&dev_attr_caps2.attr,
 	NULL,
 };
 
@@ -951,9 +947,9 @@ int mmc_sd_setup_card(struct mmc_host *host, struct mmc_card *card,
 		int ro = -1;
 
 		if (host->ops->get_ro) {
-			mmc_host_clk_hold(host);
+			mmc_host_clk_hold(card->host);
 			ro = host->ops->get_ro(host);
-			mmc_host_clk_release(host);
+			mmc_host_clk_release(card->host);
 		}
 
 		if (ro < 0) {
@@ -1074,9 +1070,9 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		 * value registers for UHS-I cards.
 		 */
 		if (host->ops->enable_preset_value) {
-			mmc_host_clk_hold(host);
+			mmc_host_clk_hold(card->host);
 			host->ops->enable_preset_value(host, true);
-			mmc_host_clk_release(host);
+			mmc_host_clk_release(card->host);
 		}
 	} else {
 		/*

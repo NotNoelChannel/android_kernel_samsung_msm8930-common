@@ -72,7 +72,7 @@ struct voice_dha_data {
 	short dha_select;
 	short dha_params[12];
 };
-#endif
+#endif //CONFIG_SEC_DHA_SOL_MAL
 enum {
 	VOC_INIT = 0,
 	VOC_RUN,
@@ -419,10 +419,10 @@ struct vss_istream_cmd_start_record_t {
 	 */
 } __packed;
 
-#define VOICE_MODULE_DHA        0x10001020
+#define VOICE_MODULE_DHA		0x10001020
 #define VOICE_PARAM_DHA_DYNAMIC  0x10001022
 
-#define VOICEPROC_MODULE_TX          0x00010EF6
+#define VOICEPROC_MODULE_TX 		 0x00010EF6
 #define VOICE_PARAM_LOOPBACK_ENABLE  0x00010E18
 
 struct vss_istream_cmd_create_passive_control_session_t {
@@ -688,6 +688,7 @@ struct cvs_start_record_cmd {
 	struct apr_hdr hdr;
 	struct vss_istream_cmd_start_record_t rec_mode;
 } __packed;
+
 struct cvs_set_loopback_enable_cmd {
 	struct apr_hdr hdr;
 	struct vss_icommon_cmd_set_loopback_enable_t vss_set_loopback;
@@ -1089,10 +1090,9 @@ enum {
 
 /* called  by alsa driver */
 #ifdef CONFIG_SEC_DHA_SOL_MAL
-int voice_sec_set_dha_data(uint16_t session_id, short mode,
-					short select, short *parameters);
+int voice_sec_set_dha_data(uint16_t session_id, int mode,
+					int select, short *parameters);
 #endif /* CONFIG_SEC_DHA_SOL_MAL*/
-
 int voc_set_pp_enable(uint16_t session_id, uint32_t module_id, uint32_t enable);
 int voc_get_pp_enable(uint16_t session_id, uint32_t module_id);
 int voc_set_widevoice_enable(uint16_t session_id, uint32_t wv_enable);
@@ -1116,7 +1116,6 @@ int voc_set_route_flag(uint16_t session_id, uint8_t path_dir, uint8_t set);
 uint8_t voc_get_route_flag(uint16_t session_id, uint8_t path_dir);
 int voc_get_loopback_enable(void);
 void voc_set_loopback_enable(int loopback_enable);
-
 
 #define VOICE_SESSION_NAME "Voice session"
 #define VOIP_SESSION_NAME "VoIP session"

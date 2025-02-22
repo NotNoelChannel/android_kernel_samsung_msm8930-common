@@ -193,7 +193,9 @@ static u32 *ipv4_cow_metrics(struct dst_entry *dst, unsigned long old)
 	return p;
 }
 
-static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const void *daddr);
+static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst,
+					   struct sk_buff *skb,
+					   const void *daddr);
 
 static struct dst_ops ipv4_dst_ops = {
 	.family =		AF_INET,
@@ -1137,7 +1139,9 @@ static int slow_chain_length(const struct rtable *head)
 	return length >> FRACT_BITS;
 }
 
-static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const void *daddr)
+static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst,
+					   struct sk_buff *skb,
+					   const void *daddr)
 {
 	static const __be32 inaddr_any = 0;
 	struct net_device *dev = dst->dev;
@@ -1151,6 +1155,8 @@ static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const vo
 		pkey = &inaddr_any;
 	else if (rt->rt_gateway)
 		pkey = (const __be32 *) &rt->rt_gateway;
+	else if (skb)
+		pkey = &ip_hdr(skb)->daddr;
 
 	n = __ipv4_neigh_lookup(dev, *(__force u32 *)pkey);
 	if (n)
@@ -1160,7 +1166,7 @@ static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const vo
 
 static int rt_bind_neighbour(struct rtable *rt)
 {
-	struct neighbour *n = ipv4_neigh_lookup(&rt->dst, &rt->rt_gateway);
+	struct neighbour *n = ipv4_neigh_lookup(&rt->dst, NULL, &rt->rt_gateway);
 	if (IS_ERR(n))
 		return PTR_ERR(n);
 	dst_set_neighbour(&rt->dst, n);
@@ -1447,7 +1453,7 @@ static void check_peer_redir(struct dst_entry *dst, struct inet_peer *peer)
 
 	rt->rt_gateway = peer->redirect_learned.a4;
 
-	n = ipv4_neigh_lookup(&rt->dst, &rt->rt_gateway);
+	n = ipv4_neigh_lookup(&rt->dst, NULL, &rt->rt_gateway);
 	if (IS_ERR(n)) {
 		rt->rt_gateway = orig_gw;
 		return;
@@ -2823,15 +2829,10 @@ static struct rtable *ip_route_output_slow(struct net *net, struct flowi4 *fl4)
 	    res.type == RTN_UNICAST && !fl4->flowi4_oif)
 		fib_select_default(&res);
 
-	dev_out = FIB_RES_DEV(res);
-	if (dev_out == NULL) {
-		rth = ERR_PTR(-ENODEV);
-		goto out;
-	}
-
 	if (!fl4->saddr)
 		fl4->saddr = FIB_RES_PREFSRC(net, res);
 
+	dev_out = FIB_RES_DEV(res);
 	fl4->flowi4_oif = dev_out->ifindex;
 
 
@@ -2990,14 +2991,13 @@ struct rtable *ip_route_output_flow(struct net *net, struct flowi4 *flp4,
 }
 EXPORT_SYMBOL_GPL(ip_route_output_flow);
 
-static int rt_fill_info(struct net *net,
+static int rt_fill_info(struct net *net, struct flowi4 *fl4,
 			struct sk_buff *skb, u32 pid, u32 seq, int event,
 			int nowait, unsigned int flags)
 {
 	struct rtable *rt = skb_rtable(skb);
 	struct rtmsg *r;
 	struct nlmsghdr *nlh;
-	struct flowi4 *fl4 = &(inet_sk(skb->sk))->cork.fl.u.ip4;
 	unsigned long expires = 0;
 	const struct inet_peer *peer = rt->peer;
 	u32 id = 0, ts = 0, tsage = 0, error;
@@ -3111,6 +3111,7 @@ static int inet_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr* nlh, void 
 	struct rtmsg *rtm;
 	struct nlattr *tb[RTA_MAX+1];
 	struct rtable *rt = NULL;
+	struct flowi4 fl4;
 	__be32 dst = 0;
 	__be32 src = 0;
 	u32 iif;
@@ -3150,6 +3151,14 @@ static int inet_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr* nlh, void 
 	else
 		uid = (iif ? INVALID_UID : current_uid());
 
+	memset(&fl4, 0, sizeof(fl4));
+	fl4.daddr = dst;
+	fl4.saddr = src;
+	fl4.flowi4_tos = rtm->rtm_tos;
+	fl4.flowi4_oif = tb[RTA_OIF] ? nla_get_u32(tb[RTA_OIF]) : 0;
+	fl4.flowi4_mark = mark;
+	fl4.flowi4_uid = uid;
+
 	if (iif) {
 		struct net_device *dev;
 
@@ -3170,14 +3179,6 @@ static int inet_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr* nlh, void 
 		if (err == 0 && rt->dst.error)
 			err = -rt->dst.error;
 	} else {
-		struct flowi4 fl4 = {
-			.daddr = dst,
-			.saddr = src,
-			.flowi4_tos = rtm->rtm_tos,
-			.flowi4_oif = tb[RTA_OIF] ? nla_get_u32(tb[RTA_OIF]) : 0,
-			.flowi4_mark = mark,
-			.flowi4_uid = uid,
-		};
 		rt = ip_route_output_key(net, &fl4);
 
 		err = 0;
@@ -3192,7 +3193,7 @@ static int inet_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr* nlh, void 
 	if (rtm->rtm_flags & RTM_F_NOTIFY)
 		rt->rt_flags |= RTCF_NOTIFY;
 
-	err = rt_fill_info(net, skb, NETLINK_CB(in_skb).pid, nlh->nlmsg_seq,
+	err = rt_fill_info(net, &fl4, skb, NETLINK_CB(in_skb).pid, nlh->nlmsg_seq,
 			   RTM_NEWROUTE, 0, 0);
 	if (err <= 0)
 		goto errout_free;
@@ -3230,8 +3231,8 @@ int ip_rt_dump(struct sk_buff *skb,  struct netlink_callback *cb)
 			if (rt_is_expired(rt))
 				continue;
 			skb_dst_set_noref(skb, &rt->dst);
-			if (rt_fill_info(net, skb, NETLINK_CB(cb->skb).pid,
-					 cb->nlh->nlmsg_seq, RTM_NEWROUTE,
+			if (rt_fill_info(net, &(inet_sk(skb->sk))->cork.fl.u.ip4, skb,
+					 NETLINK_CB(cb->skb).pid, cb->nlh->nlmsg_seq, RTM_NEWROUTE,
 					 1, NLM_F_MULTI) <= 0) {
 				skb_dst_drop(skb);
 				rcu_read_unlock_bh();

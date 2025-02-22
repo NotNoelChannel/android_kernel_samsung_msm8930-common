@@ -48,7 +48,8 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_SVLTE_SURF] = "SLVTE_SURF",
 	[HW_PLATFORM_MTP] = "MTP",
 	[HW_PLATFORM_LIQUID] = "Liquid",
-	[HW_PLATFORM_DRAGON] = "Dragon"
+	[HW_PLATFORM_DRAGON] = "Dragon",
+	[HW_PLATFORM_QRD] = "QRD",
 };
 
 enum {
@@ -804,7 +805,7 @@ int __init socinfo_init(void)
 		break;
 	case 3:
 		pr_info("%s: v%u, id=%u, ver=%u.%u, "
-			 "raw_id=%u, raw_ver=%u, hw_pla-t=%u\n",
+			 "raw_id=%u, raw_ver=%u, hw_plat=%u\n",
 			__func__, socinfo->v1.format, socinfo->v1.id,
 			SOCINFO_VERSION_MAJOR(socinfo->v1.version),
 			SOCINFO_VERSION_MINOR(socinfo->v1.version),
@@ -813,7 +814,7 @@ int __init socinfo_init(void)
 		break;
 	case 4:
 		pr_info("%s: v%u, id=%u, ver=%u.%u, "
-			 "raw_id=%u, raw_ver=%u, hw_pla-t=%u, hw_pla-t_ver=%u\n",
+			 "raw_id=%u, raw_ver=%u, hw_plat=%u, hw_plat_ver=%u\n",
 			__func__, socinfo->v1.format, socinfo->v1.id,
 			SOCINFO_VERSION_MAJOR(socinfo->v1.version),
 			SOCINFO_VERSION_MINOR(socinfo->v1.version),
@@ -822,7 +823,7 @@ int __init socinfo_init(void)
 		break;
 	case 5:
 		pr_info("%s: v%u, id=%u, ver=%u.%u, "
-			 "raw_id=%u, raw_ver=%u, hw_pla-t=%u,  hw_pla-t_ver=%u\n"
+			 "raw_id=%u, raw_ver=%u, hw_plat=%u,  hw_plat_ver=%u\n"
 			" accessory_chip=%u\n", __func__, socinfo->v1.format,
 			socinfo->v1.id,
 			SOCINFO_VERSION_MAJOR(socinfo->v1.version),
@@ -833,8 +834,8 @@ int __init socinfo_init(void)
 		break;
 	case 6:
 		pr_info("%s: v%u, id=%u, ver=%u.%u, "
-			 "raw_id=%u, raw_ver=%u, hw_pla-t=%u,  hw_pla-t_ver=%u\n"
-			" accessory_chip=%u hw_pla-t_subtype=%u\n", __func__,
+			 "raw_id=%u, raw_ver=%u, hw_plat=%u,  hw_plat_ver=%u\n"
+			" accessory_chip=%u hw_plat_subtype=%u\n", __func__,
 			socinfo->v1.format,
 			socinfo->v1.id,
 			SOCINFO_VERSION_MAJOR(socinfo->v1.version),
@@ -845,7 +846,7 @@ int __init socinfo_init(void)
 			socinfo->v6.hw_platform_subtype);
 		break;
 	case 7:
-		pr_info("%s: v%u, id=%u, ver=%u.%u, raw_id=%u, raw_ver=%u, hw_pla-t=%u, hw_pla-t_ver=%u\n accessory_chip=%u, hw_pla-t_subtype=%u, pmic_model=%u, pmic_die_revision=%u\n",
+		pr_info("%s: v%u, id=%u, ver=%u.%u, raw_id=%u, raw_ver=%u, hw_plat=%u, hw_plat_ver=%u\n accessory_chip=%u, hw_plat_subtype=%u, pmic_model=%u, pmic_die_revision=%u\n",
 			__func__,
 			socinfo->v1.format,
 			socinfo->v1.id,

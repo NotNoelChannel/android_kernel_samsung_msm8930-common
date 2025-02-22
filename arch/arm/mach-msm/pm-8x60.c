@@ -56,12 +56,6 @@
 #include "pm-boot.h"
 #include <mach/event_timer.h>
 #include <linux/cpu_pm.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
-
-#include <mach/gpiomux.h>
-#include <linux/regulator/consumer.h>
 
 /******************************************************************************
  * Debug Definitions
@@ -77,7 +71,6 @@ enum {
 	MSM_PM_DEBUG_IDLE = BIT(6),
 	MSM_PM_DEBUG_IDLE_LIMITS = BIT(7),
 	MSM_PM_DEBUG_HOTPLUG = BIT(8),
-	MSM_PM_DEBUG_GPIO = BIT(9),
 };
 
 static int msm_pm_debug_mask = 1;
@@ -389,7 +382,6 @@ static void msm_pm_config_hw_before_retention(void)
 static int msm_pm_sleep_time_override;
 module_param_named(sleep_time_override,
 	msm_pm_sleep_time_override, int, S_IRUGO | S_IWUSR | S_IWGRP);
-static uint64_t suspend_wake_time;
 #endif
 
 #define SCLK_HZ (32768)
@@ -564,13 +556,8 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-#ifdef CONFIG_SEC_DEBUG
-	secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
 	collapsed = msm_pm_l2x0_power_collapse();
-	secdbg_sched_msg("-pc(%d)", collapsed);
-#else
-	collapsed = msm_pm_l2x0_power_collapse();
-#endif
+
 	msm_pm_boot_config_after_pc(cpu);
 
 	if (collapsed) {
@@ -990,7 +977,7 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 		if (acc_sts & msm_pm_slp_sts[cpu].mask)
 			return 0;
 		udelay(100);
-		WARN(++timeout == 20, "CPU%u didn't collape within 2ms\n",
+		WARN(++timeout == 10, "CPU%u didn't collape within 1ms\n",
 					cpu);
 	}
 
@@ -1020,11 +1007,6 @@ void msm_pm_cpu_enter_lowpower(unsigned int cpu)
 		msm_pm_retention();
 	else
 		msm_pm_swfi();
-}
-static int msm_pm_prepare_late(void)
-{
-	regulator_debug_print_enabled();
-	return 0;
 }
 
 static int msm_pm_enter(suspend_state_t state)
@@ -1066,15 +1048,10 @@ static int msm_pm_enter(suspend_state_t state)
 
 		clock_debug_print_enabled();
 
-		if (MSM_PM_DEBUG_GPIO & msm_pm_debug_mask)
-			msm_gpio_print_enabled();
-
 #ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
-		if (!suspend_wake_time)
-			suspend_wake_time =  msm_pm_sleep_time_override;
 		if (msm_pm_sleep_time_override > 0) {
 			int64_t ns = NSEC_PER_SEC *
-				(int64_t) suspend_wake_time;
+				(int64_t) msm_pm_sleep_time_override;
 			msm_pm_set_max_sleep_time(ns);
 			msm_pm_sleep_time_override = 0;
 		}
@@ -1127,25 +1104,9 @@ enter_exit:
 }
 
 static struct platform_suspend_ops msm_pm_ops = {
-	.prepare_late = msm_pm_prepare_late,
 	.enter = msm_pm_enter,
 	.valid = suspend_valid_only_mem,
 };
-
-void lpm_suspend_wake_time(uint64_t wakeup_time)
-{
-	if (wakeup_time <= 0) {
-		suspend_wake_time = msm_pm_sleep_time_override;
-		return;
-	}
-
-	if (msm_pm_sleep_time_override &&
-			(msm_pm_sleep_time_override < wakeup_time))
-			suspend_wake_time = msm_pm_sleep_time_override;
-	else
-			suspend_wake_time = wakeup_time;
-}
-EXPORT_SYMBOL(lpm_suspend_wake_time);
 
 /******************************************************************************
  * Initialization routine

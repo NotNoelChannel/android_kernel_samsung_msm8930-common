@@ -107,15 +107,15 @@ struct hdmi_msm_state_type {
 	void __iomem *hdmi_io;
 
 	struct external_common_state_type common;
-	boolean hpd_on_offline;
-#if defined(CONFIG_VIDEO_MHL_V2)
-	boolean mhl_hpd_state;
-#endif
-	struct switch_dev	hdmi_audio_switch;
-	struct switch_dev	hdmi_audio_ch;
-	boolean	boot_completion;
 	boolean is_mhl_enabled;
 	struct completion hpd_event_processed;
+	struct switch_dev	hdmi_audio_switch;
+	struct switch_dev	hdmi_audio_ch;
+	boolean hpd_on_offline;
+	boolean mhl_hpd_state;
+#if !defined CONFIG_SAMSUNG_MHL_8240
+	boolean boot_completion;
+#endif
 };
 
 extern struct hdmi_msm_state_type *hdmi_msm_state;

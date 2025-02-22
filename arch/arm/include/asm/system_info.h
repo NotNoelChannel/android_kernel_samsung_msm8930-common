@@ -19,11 +19,6 @@ extern unsigned int system_rev;
 extern unsigned int system_serial_low;
 extern unsigned int system_serial_high;
 extern unsigned int mem_fclk_21285;
-#ifdef CONFIG_SEC_DEBUG_SUBSYS
-extern const char *unit_name;
-extern char pmic_version[16];
-extern u8 uvd_thresh;
-#endif
 
 extern int __pure cpu_architecture(void);
 

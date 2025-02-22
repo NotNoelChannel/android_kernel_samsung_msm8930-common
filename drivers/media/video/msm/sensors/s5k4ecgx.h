@@ -71,7 +71,7 @@
 #define VT_MODE			2
 
 /*AF STATUS*/
-#define IN_AUTO_MODE 	1
+#define IN_AUTO_MODE	1
 #define IN_MACRO_MODE	2
 #define IN_OCR_MODE		3
 

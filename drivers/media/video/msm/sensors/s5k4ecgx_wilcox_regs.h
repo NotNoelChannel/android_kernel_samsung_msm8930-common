@@ -1592,34 +1592,34 @@ const unsigned int s5k4ecgx_init_reg2[] = {
 	0x0F120194,  	//TVAR_ash_AwbAshCord_6_ 7500K
 // GAS Alpha Table
 	0x002A08F6,    
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_0__0_ R  // 2300K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_0__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_0__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_0__3_ B
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_1__0_ R  // 2750K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_1__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_1__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_1__3_ B
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_2__0_ R  // 3300K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_2__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_2__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_2__3_ B
+	0x0F124000,      //TVAR_ash_GASAlpha_0__0_ R  // 2300K
+	0x0F124000,      //TVAR_ash_GASAlpha_0__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_0__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_0__3_ B
+	0x0F124000,      //TVAR_ash_GASAlpha_1__0_ R  // 2750K
+	0x0F124000,      //TVAR_ash_GASAlpha_1__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_1__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_1__3_ B
+	0x0F124000,      //TVAR_ash_GASAlpha_2__0_ R  // 3300K
+	0x0F124000,      //TVAR_ash_GASAlpha_2__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_2__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_2__3_ B
 	0x0F123B00, //4000,      //TVAR_ash_GASAlpha_3__0_ R  // 4150K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_3__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_3__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_3__3_ B 	
+	0x0F124000,      //TVAR_ash_GASAlpha_3__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_3__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_3__3_ B 
 	0x0F124500, //3E00 //4200,      //TVAR_ash_GASAlpha_4__0_ R  // 5250K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_4__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_4__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_4__3_ B	
+	0x0F124000,      //TVAR_ash_GASAlpha_4__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_4__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_4__3_ B
 	0x0F124500, //4200,      //TVAR_ash_GASAlpha_5__0_ R  // 6400K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_5__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_5__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_5__3_ B
+	0x0F124000,      //TVAR_ash_GASAlpha_5__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_5__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_5__3_ B
 	0x0F124500, //4300,      //TVAR_ash_GASAlpha_6__0_ R  // 7500K
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_6__1_ GR
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_6__2_ GB
-	0x0F124000, //4000,      //TVAR_ash_GASAlpha_6__3_ B
+	0x0F124000,      //TVAR_ash_GASAlpha_6__1_ GR
+	0x0F124000,      //TVAR_ash_GASAlpha_6__2_ GB
+	0x0F124000,      //TVAR_ash_GASAlpha_6__3_ B
 // Outdoor GAS Alpha
 	0x0F124500,   //TVAR_ash_GASOutdoorAlpha_0_ R
 	0x0F124000,   //TVAR_ash_GASOutdoorAlpha_1_ GR
@@ -2038,12 +2038,12 @@ const unsigned int s5k4ecgx_init_reg2[] = {
 	0x0F120000,
 	0x0F120000,
 	0x0F120000,
+	0x0F120000,
+	0x0F120000,
+	0x0F120000,
+	0x0F120000,
 	0x0F120000, 
 	0x0F120000, 	  //awbb_IndoorGrZones_m_GridStep //
-	0x0F120000,   //0000, //0000
-	0x0F120000,   //0000, //0000
-	0x0F120000,   //0000, //0000
-	0x0F120000,   //0000, //0000
 	0x0F120005, 
 	0x002A1070, 		//awbb_IndoorGrZones_ZInfo_m_GridSz //
 	0x0F12000C, // 0010
@@ -2179,21 +2179,30 @@ const unsigned int s5k4ecgx_init_reg2[] = {
 	0x0F12FFEC,
 	0x0F12FFEC,
 	0x0F120000,
-	
 	0x0F120050,
 	0x0F120000, 
 	0x0F12FFEC, 
 	0x0F12FFEC,
 	0x0F12FFEC,
 	0x0F120000,
-	
 	0x0F120050,
 	0x0F120000, 
 	0x0F12FFEC, 
 	0x0F12FFEC,
-	0x0F12FFEC,
+	0x0F12FFEC, 
 	0x0F120000,
-	
+	0x0F12FF8C, 
+	0x0F12000A, 
+	0x0F12000A, 
+	0x0F12FFB6,
+	0x0F12FFB6,
+	0x0F12FF52,
+	0x0F12FF8C, 
+	0x0F12000A, 
+	0x0F12000A, 
+	0x0F12FFB6,
+	0x0F12FFB6,
+	0x0F12FF52,
 	0x0F12FF8C, 
 	0x0F12000A, 
 	0x0F12000A, 
@@ -2201,39 +2210,16 @@ const unsigned int s5k4ecgx_init_reg2[] = {
 	0x0F12FFB6,
 	0x0F12FF52,
 	
-
-	0x0F12FF8C, 
-	0x0F12000A, 
-	0x0F12000A, 
-	0x0F12FFB6,
-	0x0F12FFB6,
-	0x0F12FF52,
-	
-	0x0F12FF8C, 
-	0x0F12000A, 
-	0x0F12000A, 
-	0x0F12FFB6,
-	0x0F12FFB6,
-	0x0F12FF52,
-	
-
 	0x0F120000,   	//Outdoor Grid Offset            
 	0x0F120000, 
 	0x0F120000, 
-	0x0F120000, 
+	0x0F120000,           
 	0x0F120000, 
 	0x0F120000,     
       
 	0x0F120000, 
 	0x0F120000, 
-	0x0F120000, 
-	0x0F120000, 
-	0x0F120000, 
-	0x0F120000,  
-         
-	0x0F120000, 
-	0x0F120000, 
-	0x0F120000, 
+	0x0F120000,           
 	0x0F120000, 
 	0x0F120000, 
 	0x0F120000,  
@@ -2255,7 +2241,12 @@ const unsigned int s5k4ecgx_init_reg2[] = {
 	0x0F120000, 
 	0x0F120000, 
 	0x0F120000, 
-
+	0x0F120000, 
+	0x0F120000, 
+	0x0F120000, 
+	0x0F120000, 
+	0x0F120000, 
+	0x0F120000, 
 	0x002A1208, 
 	0x0F120020, 
 	0x002A144E, 
@@ -4884,36 +4875,52 @@ const unsigned int s5k4ecgx_Scene_Landscape[] = {
 };
 
 const unsigned int s5k4ecgx_Scene_Sports[] = {
-	0xFCFCD000,                                  
-	0x00287000,                                  
-	0x002A060C,                                  
-	0x0F120200,                                  
-	0x002A06B8,                                  
-	0x0F126828,                                  
-	0x0F120000,                                  
-	0x002A0938,                                  
-	0x0F120001,	//afit_bUseNB_Afit               
-	0x002A04D0,                                  
-	0x0F120001,	//REG_SF_USER_IsoType            
-	0x0F120200,	//REG_SF_USER_IsoVal             
-	0x0F120001,	//REG_SF_USER_IsoChanged         
-	0x002A06C2,                                  
-	0x0F120200,	//lt_bUseSecISODgain             
-	0x002A0266,                                  
-	0x0F120000,	//REG_TC_GP_ActivePrevConfig     
-	0x002A026A,                                  
-	0x0F120001,	//REG_TC_GP_PrevOpenAfterChange  
-	0x002A024E,                                  
-	0x0F120001,	//REG_TC_GP_NewConfigSync        
-	0x002A0268,                                  
-	0x0F120001,	//REG_TC_GP_PrevConfigChanged    
-	0x002A0270,                                  
-	0x0F120001,	//REG_TC_GP_CapConfigChanged     
-	0x002A023E,                                  
-	0x0F120001,	//REG_TC_GP_EnablePreview        
-	0x0F120001,	//REG_TC_GP_EnablePreviewChanged 
-
-
+	0xFCFCD000,
+	0x00287000,
+	0x002A0544,
+	0x0F120130,	//lt_uLimitHigh
+	0x0F1200D0,	//lt_uLimitLow
+	0x002A0638,
+	0x0F120001,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_0_ */
+	0x0F120A3C,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_1_ */
+	0x0F120D05,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_2_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_3_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_4_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_5_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_6_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_7_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_8_ */
+	0x0F123408,
+	0x0F120000,	/*lt_ExpGain_ExpCurveGainMaxStr_0__ulExpOut_9_ */
+	0x002A0938,
+	0x0F120001,	//afit_bUseNB_Afit
+	0x002A04D0,
+	0x0F120003,	//REG_SF_USER_IsoType
+	0x0F120200,	//REG_SF_USER_IsoVal
+	0x0F120001,	//REG_SF_USER_IsoChanged
+	0x002A0266,
+	0x0F120000,	//REG_TC_GP_ActivePrevConfig
+	0x002A026A,
+	0x0F120001,	//REG_TC_GP_PrevOpenAfterChange
+	0x002A024E,
+	0x0F120001,	//REG_TC_GP_NewConfigSync
+	0x002A0268,
+	0x0F120001,	//REG_TC_GP_PrevConfigChanged
+	0x002A0270,
+	0x0F120001,	//REG_TC_GP_CapConfigChanged
+	0x002A023E,
+	0x0F120001,	//REG_TC_GP_EnablePreview
+	0x0F120001,	//REG_TC_GP_EnablePreviewChanged
+	0xFFFF0064,
 };
 
 const unsigned int s5k4ecgx_Scene_Party_Indoor[] = {
@@ -6580,11 +6587,12 @@ const unsigned int s5k4ecgx_1280_Camcorder[] = {	/* 1280 720 */
 	0x0F120500,	/*REG_0TC_PCFG_usWidth  //Hsize   : 1280			*/
 	0x0F1202D0, /*REG_0TC_PCFG_usHeight//Vsize   : 720       */
 
-0x002A02BE,
-0x0F120000,
-0x0F120001,
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
 
 	0x002A0266,
 	0x0F120000,	/*	#REG_TC_GP_ActivePrevConfig    	*/
@@ -8188,11 +8196,13 @@ const unsigned int s5k4ecgx_800_Camcorder[] = {	/* 800 480 */
 	0x0F120320,	/*REG_0TC_PCFG_usWidth  //Hsize   : 800			*/
 	0x0F1201E0, /*REG_0TC_PCFG_usHeight//Vsize   : 480      */
 
-0x002A02BE,
-0x0F120000,
-0x0F120001,
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
 
 	0x002A0266,
 	0x0F120000,	/*	#REG_TC_GP_ActivePrevConfig    	*/
@@ -8207,8 +8217,9 @@ const unsigned int s5k4ecgx_800_Camcorder[] = {	/* 800 480 */
 	0x002A023E,
 	0x0F120001,	/*	#REG_TC_GP_EnablePreview       	*/
 	0x0F120001,	/*	#REG_TC_GP_EnablePreviewChanged	*/
-0x002A02AA,
-0x0F120006, /* narrow(Y gamma 16~235) */
+
+	0x002A02AA,
+	0x0F120006, /* narrow(Y gamma 16~235) */
 };
 
 const unsigned int s5k4ecgx_720_Camcorder[] = {	/* 720 480 */
@@ -9024,11 +9035,13 @@ const unsigned int s5k4ecgx_720_Camcorder[] = {	/* 720 480 */
 	0x0F1202D0,	/*REG_0TC_PCFG_usWidth  //Hsize   : 720			*/
 	0x0F1201E0, /*REG_0TC_PCFG_usHeight//Vsize   : 480       */
 
-0x002A02BE,
-0x0F120000,
-0x0F120001,
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
 
 	0x002A0266,
 	0x0F120000,	/*	#REG_TC_GP_ActivePrevConfig    	*/
@@ -9043,8 +9056,9 @@ const unsigned int s5k4ecgx_720_Camcorder[] = {	/* 720 480 */
 	0x002A023E,
 	0x0F120001,	/*	#REG_TC_GP_EnablePreview       	*/
 	0x0F120001,	/*	#REG_TC_GP_EnablePreviewChanged	*/
-0x002A02AA,
-0x0F120006, /* narrow(Y gamma 16~235) */
+
+	0x002A02AA,
+	0x0F120006, /* narrow(Y gamma 16~235) */
 };
 
 const unsigned int s5k4ecgx_640_Camcorder[] = {	/* 640 480 */
@@ -9860,11 +9874,13 @@ const unsigned int s5k4ecgx_640_Camcorder[] = {	/* 640 480 */
 	0x0F120280,	/*REG_0TC_PCFG_usWidth  //Hsize   : 640			*/
 	0x0F1201E0, /*REG_0TC_PCFG_usHeight//Vsize   : 480     */
 
-0x002A02BE,
-0x0F120000,
-0x0F120001,
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
-0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+	0x0F12014A, // REG_0TC_PCFG_usMinFrTimeMsecMult10 = 30fps
+
 
 	0x002A0266,
 	0x0F120000,	/*	#REG_TC_GP_ActivePrevConfig    	*/
@@ -9879,8 +9895,9 @@ const unsigned int s5k4ecgx_640_Camcorder[] = {	/* 640 480 */
 	0x002A023E,
 	0x0F120001,	/*	#REG_TC_GP_EnablePreview       	*/
 	0x0F120001,	/*	#REG_TC_GP_EnablePreviewChanged	*/
-0x002A02AA,
-0x0F120006, /* narrow(Y gamma 16~235) */
+
+	0x002A02AA,
+	0x0F120006, /* narrow(Y gamma 16~235) */
 };
 
 const unsigned int s5k4ecgx_352_Camcorder[] = {	/* 352 288 */
@@ -12405,7 +12422,7 @@ const unsigned int s5k4ecgx_1280_Preview[] = {
   0x002A02BE,
   0x0F120000,
   0x0F120001,
-0x0F1203E8,
+  0x0F1203E8,
   0x0F12014A,
              
 
@@ -12477,7 +12494,7 @@ const unsigned int s5k4ecgx_1280_Preview[] = {
   0x0F120001,
              
   0x002A0582,
-0x0F120000,
+  0x0F120000,
              
 
   0x002A139A,

@@ -110,6 +110,8 @@ source "drivers/edac/Kconfig"
 
 source "drivers/rtc/Kconfig"
 
+source "drivers/esoc/Kconfig"
+
 source "drivers/dma/Kconfig"
 
 source "drivers/dca/Kconfig"
@@ -150,19 +152,16 @@ source "drivers/gud/Kconfig"
 
 source "drivers/coresight/Kconfig"
 
-source "drivers/battery/Kconfig"
-
-source "drivers/motor/Kconfig"
+source "drivers/sensors/Kconfig"
 
 source "drivers/barcode_emul/Kconfig"
 
+source "drivers/battery/Kconfig"
+
+source "drivers/irda/Kconfig"
+
+source "drivers/motor/Kconfig"
+
 source "drivers/samsung/Kconfig"
 
-source "drivers/sensors/Kconfig"
-
-source "drivers/sensorhub/Kconfig"
-
-source "drivers/sensors_alps/Kconfig"
-
-source "drivers/ultrasonic/Kconfig"
 endmenu

@@ -219,7 +219,7 @@ static const struct file_operations list_rates_fops = {
 };
 
 static struct dentry *debugfs_base;
-static u32 debug_suspend = 1;
+static u32 debug_suspend;
 
 struct clk_table {
 	struct list_head node;

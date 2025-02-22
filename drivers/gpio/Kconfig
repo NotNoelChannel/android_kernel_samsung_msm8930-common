@@ -575,5 +575,4 @@ config GPIO_QPNP_PIN_DEBUG
 	help
 	  Say 'y' here to include debug support for the Qualcomm
 	  QPNP gpio driver.
-
 endif

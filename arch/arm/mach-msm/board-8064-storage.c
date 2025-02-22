@@ -21,6 +21,7 @@
 #include <mach/msm_bus_board.h>
 #include <mach/board.h>
 #include <mach/gpiomux.h>
+#include <mach/socinfo.h>
 #include "devices.h"
 #include "board-8064.h"
 #include "board-storage-common-a.h"
@@ -142,9 +143,9 @@ static struct msm_mmc_pad_pull sdc3_pad_pull_on_cfg[] = {
 };
 
 static struct msm_mmc_pad_pull sdc3_pad_pull_off_cfg[] = {
-	{TLMM_PULL_SDC3_CLK, GPIO_CFG_NO_PULL},
-	{TLMM_PULL_SDC3_CMD, GPIO_CFG_PULL_UP},
-	{TLMM_PULL_SDC3_DATA, GPIO_CFG_PULL_UP}
+	{TLMM_PULL_SDC3_CLK, GPIO_CFG_PULL_DOWN},
+	{TLMM_PULL_SDC3_CMD, GPIO_CFG_PULL_DOWN},
+	{TLMM_PULL_SDC3_DATA, GPIO_CFG_PULL_DOWN}
 };
 
 static struct msm_mmc_pad_pull_data mmc_pad_pull_data[MAX_SDCC_CONTROLLER] = {
@@ -236,6 +237,10 @@ static struct msm_mmc_pin_data mmc_slot_pin_data[MAX_SDCC_CONTROLLER] = {
 #ifdef CONFIG_MMC_MSM_SDC1_SUPPORT
 static unsigned int sdc1_sup_clk_rates[] = {
 	400000, 24000000, 48000000, 96000000
+};
+
+static unsigned int sdc1_sup_clk_rates_all[] = {
+	400000, 24000000, 48000000, 96000000, 192000000
 };
 
 static struct mmc_platform_data sdc1_data = {
@@ -332,8 +337,17 @@ static struct mmc_platform_data *apq8064_sdc4_pdata;
 
 void __init apq8064_init_mmc(void)
 {
-	if (apq8064_sdc1_pdata)
+	if (apq8064_sdc1_pdata) {
+		/* 8064 v2 supports upto 200MHz clock on SDC1 slot */
+		if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2) {
+			apq8064_sdc1_pdata->sup_clk_table =
+					sdc1_sup_clk_rates_all;
+			apq8064_sdc1_pdata->sup_clk_cnt	=
+					ARRAY_SIZE(sdc1_sup_clk_rates_all);
+		}
 		apq8064_add_sdcc(1, apq8064_sdc1_pdata);
+		apq8064_add_uio();
+	}
 
 	if (apq8064_sdc2_pdata)
 		apq8064_add_sdcc(2, apq8064_sdc2_pdata);

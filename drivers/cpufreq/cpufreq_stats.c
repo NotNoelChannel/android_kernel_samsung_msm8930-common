@@ -376,7 +376,11 @@ static int compare_for_sort(const void *lhs_ptr, const void *rhs_ptr)
 {
 	unsigned int lhs = *(const unsigned int *)(lhs_ptr);
 	unsigned int rhs = *(const unsigned int *)(rhs_ptr);
-	return (lhs - rhs);
+	if (lhs < rhs)
+		return -1;
+	if (lhs > rhs)
+		return 1;
+	return 0;
 }
 
 static bool check_all_freq_table(unsigned int freq)
@@ -396,6 +400,18 @@ static void create_all_freq_table(void)
 	if (!all_freq_table)
 		pr_warn("could not allocate memory for all_freq_table\n");
 	return;
+}
+
+static void free_all_freq_table(void)
+{
+	if (all_freq_table) {
+		if (all_freq_table->freq_table) {
+			kfree(all_freq_table->freq_table);
+			all_freq_table->freq_table = NULL;
+		}
+		kfree(all_freq_table);
+		all_freq_table = NULL;
+	}
 }
 
 static void add_all_freq_table(unsigned int freq)
@@ -602,11 +618,14 @@ static int __init cpufreq_stats_init(void)
 	if (ret)
 		return ret;
 
+	create_all_freq_table();
+
 	ret = cpufreq_register_notifier(&notifier_trans_block,
 				CPUFREQ_TRANSITION_NOTIFIER);
 	if (ret) {
 		cpufreq_unregister_notifier(&notifier_policy_block,
 				CPUFREQ_POLICY_NOTIFIER);
+		free_all_freq_table();
 		return ret;
 	}
 
@@ -615,7 +634,6 @@ static int __init cpufreq_stats_init(void)
 		cpufreq_update_policy(cpu);
 	}
 
-	create_all_freq_table();
 	ret = sysfs_create_file(cpufreq_global_kobject,
 			&_attr_all_time_in_state.attr);
 	if (ret)

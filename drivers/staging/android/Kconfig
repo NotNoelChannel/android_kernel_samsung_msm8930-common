@@ -10,19 +10,33 @@ if ANDROID
 
 config ANDROID_BINDER_IPC
 	bool "Android Binder IPC Driver"
+	depends on MMU
 	default n
+	---help---
+	  Binder is used in Android for both communication between processes,
+	  and remote method invocation.
+
+	  This means one Android process can call a method/routine in another
+	  Android process, using Binder to identify, invoke and pass arguments
+	  between said processes.
 
 config ANDROID_BINDER_IPC_32BIT
-	bool "Use old 32-bit binder api"
-	depends on !64BIT
+	bool
+	depends on !64BIT && ANDROID_BINDER_IPC
+	default n
 	---help---
-	  Enable to support an old 32-bit Android user-space. Breaks the new
-	  Android user-space.
+	  The Binder API has been changed to support both 32 and 64bit
+	  applications in a mixed environment.
+
+	  Enable this to support an old 32-bit Android user-space (v4.4 and
+	  earlier).
+
+	  Note that enabling this will break newer Android user-space.
 
 config ANDROID_BINDER_DEVICES
 	string "Android Binder devices"
 	depends on ANDROID_BINDER_IPC
-	default "binder"
+	default "binder,hwbinder,vndbinder"
 	---help---
 	  Default value for the binder.devices parameter.
 
@@ -30,6 +44,16 @@ config ANDROID_BINDER_DEVICES
 	  that specifies the names of the binder device nodes that will be
 	  created. Each binder device has its own context manager, and is
 	  therefore logically separated from the other devices.
+
+config ANDROID_BINDER_IPC_SELFTEST
+        bool "Android Binder IPC Driver Selftest"
+        depends on ANDROID_BINDER_IPC
+        ---help---
+          This feature allows binder selftest to run.
+
+          Binder selftest checks the allocation and free of binder buffers
+          exhaustively with combinations of various buffer sizes and
+          alignments.
 
 config ASHMEM
 	bool "Enable the Anonymous Shared Memory Subsystem"
@@ -70,14 +94,6 @@ config PERSISTENT_TRACER
 
 	  If unsure, say N.
 
-config LOGCAT_SIZE
-	int "Adjust android log buffer sizes"
-	default 256
-	depends on ANDROID_LOGGER
-	help
-	  Set logger buffer size. Enter a number greater than zero.
-	  Any value less than 256 is recommended. Reduce value to save kernel static memory size.
-
 config ANDROID_TIMED_OUTPUT
 	bool "Timed output class driver"
 	default y
@@ -102,15 +118,16 @@ config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	  /sys/module/lowmemorykiller/parameters/adj and convert them
 	  to oom_score_adj values.
 
-config ANDROID_LOW_MEMORY_KILLER_BASED_MEMUSAGE
-	bool "Android Low Memory Killer: based on memusage"
-	depends on ANDROID_LOW_MEMORY_KILLER
-	default n
-	---help---
-	  select the num of max kill process
-	  based on previous memory usage status. 
-
 source "drivers/staging/android/switch/Kconfig"
+
+config ANDROID_INTF_ALARM_DEV
+	bool "Android alarm driver"
+	depends on RTC_CLASS
+	default n
+	help
+	  Provides non-wakeup and rtc backed wakeup alarms based on rtc or
+	  elapsed realtime, and a non-wakeup alarm on the monotonic clock.
+	  Also exports the alarm interface to user-space.
 
 endif # if ANDROID
 

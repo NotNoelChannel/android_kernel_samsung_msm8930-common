@@ -6,7 +6,7 @@
 
 lib-y		:= backtrace.o changebit.o csumipv6.o csumpartial.o   \
 		   csumpartialcopy.o csumpartialcopyuser.o clearbit.o \
-		   delay.o delay-loop.o findbit.o memchr.o	      \
+		   delay.o delay-loop.o findbit.o memchr.o            \
 		   memset.o memzero.o setbit.o                        \
 		   strchr.o strrchr.o                                 \
 		   testchangebit.o testclearbit.o testsetbit.o        \
@@ -49,3 +49,9 @@ lib-$(CONFIG_ARCH_SHARK)	+= io-shark.o
 
 $(obj)/csumpartialcopy.o:	$(obj)/csumpartialcopygeneric.S
 $(obj)/csumpartialcopyuser.o:	$(obj)/csumpartialcopygeneric.S
+
+ifeq ($(CONFIG_KERNEL_MODE_NEON),y)
+  NEON_FLAGS			:= -mfloat-abi=softfp -mfpu=neon
+  CFLAGS_xor-neon.o		+= $(NEON_FLAGS)
+  lib-$(CONFIG_XOR_BLOCKS)	+= xor-neon.o
+endif

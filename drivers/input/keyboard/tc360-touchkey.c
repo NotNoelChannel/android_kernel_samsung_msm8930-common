@@ -16,7 +16,6 @@
 //#define ISP_VERY_VERBOSE_DEBUG
 
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
 #include <linux/firmware.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -33,7 +32,10 @@
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 #include <linux/uaccess.h>
-#include <linux/bln.h>
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
 
 #if defined(CONFIG_MACH_SERRANO)
 #if defined(CONFIG_MACH_SERRANO_SPR) || defined(CONFIG_MACH_SERRANO_USC) \
@@ -138,7 +140,6 @@ struct tc360_data {
 	struct input_dev		*input_dev;
 	char				phys[32];
 	struct tc360_platform_data	*pdata;
-	struct early_suspend		early_suspend;
 	struct mutex			lock;
 	struct fw_image			*fw_img;
 	bool				enabled;
@@ -165,11 +166,15 @@ struct tc360_data {
 #if defined(SEC_FAC_TK)
 	struct fdata_struct		*fdata;
 #endif
+	atomic_t touchkey_enable;
+#ifdef CONFIG_FB
+	struct notifier_block fb_notif;
+#endif
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void tc360_early_suspend(struct early_suspend *h);
-static void tc360_late_resume(struct early_suspend *h);
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+                                unsigned long event, void *data);
 #endif
 
 static irqreturn_t tc360_interrupt(int irq, void *dev_id)
@@ -180,6 +185,10 @@ static irqreturn_t tc360_interrupt(int irq, void *dev_id)
 	u8 key_index;
 	bool press;
 	int ret;
+
+	if (!atomic_read(&data->touchkey_enable)) {
+		goto out;
+	}
 
 	ret = i2c_smbus_read_byte_data(client, TC360_KEY_DATA);
 	if (ret < 0) {
@@ -198,11 +207,11 @@ static irqreturn_t tc360_interrupt(int irq, void *dev_id)
 	case 1 ... 2:
 		press = !(key_val & TC360_KEY_PRESS_MASK);
 
-#if 0
+#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 		dev_info(&client->dev, "key[%3d] is %s\n",
 			data->keycodes[key_index - 1],
 			(press) ? "pressed" : "releaseed");
-//#else
+#else
 		dev_info(&client->dev, "key is %s\n",
 			(press) ? "pressed" : "releaseed");
 #endif
@@ -885,12 +894,6 @@ err:
 	}
 #endif
 
-/* early suspend is not removed for debugging. */
-/*
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
-#endif
-*/
 	data->fw_flash_state = STATE_FLASH_FAIL;
 	wake_lock_destroy(&data->fw_wake_lock);
 	free_irq(client->irq, data);
@@ -1548,6 +1551,43 @@ static ssize_t fac_read_raw_back_show(struct device *dev,
 
 }
 
+static ssize_t touchkey_enable_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tc360_data *data = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", atomic_read(&data->touchkey_enable));
+}
+
+static ssize_t touchkey_enable_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct tc360_data *data = dev_get_drvdata(dev);
+	int i = 0;
+	unsigned long val = 0;
+	bool enable = 0;
+
+	if (strict_strtoul(buf, 16, &val))
+		return -EINVAL;
+
+	enable = (val == 0 ? 0 : 1);
+	atomic_set(&data->touchkey_enable, enable);
+	if (enable) {
+		for (i = 0; i < data->num_key; i++) {
+			set_bit(data->keycodes[i], data->input_dev->keybit);
+		}
+	} else {
+		for (i = 0; i < data->num_key; i++) {
+			clear_bit(data->keycodes[i], data->input_dev->keybit);
+		}
+	}
+	input_sync(data->input_dev);
+
+	return count;
+}
+
+static DEVICE_ATTR(touchkey_enable, S_IRUGO|S_IWUSR, touchkey_enable_show,
+	      touchkey_enable_store);
 static DEVICE_ATTR(touchkey_firm_version_panel, S_IRUGO | S_IWUSR | S_IWGRP,
 		   fac_fw_ver_ic_show, NULL);
 static DEVICE_ATTR(touchkey_firm_version_phone, S_IRUGO | S_IWUSR | S_IWGRP,
@@ -1566,6 +1606,7 @@ static DEVICE_ATTR(touchkey_raw_data0, S_IRUGO, fac_read_raw_menu_show, NULL);
 static DEVICE_ATTR(touchkey_raw_data1, S_IRUGO, fac_read_raw_back_show, NULL);
 
 static struct attribute *fac_attributes[] = {
+	&dev_attr_touchkey_enable.attr,
 	&dev_attr_touchkey_firm_version_panel.attr,
 	&dev_attr_touchkey_firm_version_phone.attr,
 	&dev_attr_touchkey_firm_update.attr,
@@ -1580,49 +1621,6 @@ static struct attribute *fac_attributes[] = {
 
 static struct attribute_group fac_attr_group = {
 	.attrs = fac_attributes,
-};
-#endif
-
-#ifdef CONFIG_GENERIC_BLN
-struct tc360_data *bln_tc360_data;
-
-static int tc360_enable_touchkey_bln(int led_mask)
-{
-	i2c_smbus_write_byte_data(bln_tc360_data->client, TC360_CMD, TC360_CMD_LED_ON);
-
-	return 0;
-}
-
-static int tc360_disable_touchkey_bln(int led_mask)
-{
-	i2c_smbus_write_byte_data(bln_tc360_data->client, TC360_CMD, TC360_CMD_LED_OFF);
-
-	return 0;
-}
-
-static int tc360_power_on(void)
-{
-	bln_tc360_data->pdata->power(true);
-	msleep(TC360_POWERON_DELAY);
-	bln_tc360_data->pdata->led_power(true);
-
-	return 0;
-}
-
-static int tc360_power_off(void)
-{
-	bln_tc360_data->pdata->led_power(false);
-	bln_tc360_data->pdata->power(false);
-
-	return 0;
-}
-
-static struct bln_implementation tc360_touchkey_bln = {
-	.enable = tc360_enable_touchkey_bln,
-	.disable = tc360_disable_touchkey_bln,
-	.power_on = tc360_power_on,
-	.power_off = tc360_power_off,
-	.led_count = 1
 };
 #endif
 
@@ -1731,7 +1729,7 @@ static int __devinit tc360_probe(struct i2c_client *client,
 	dev_info(&client->dev, "number of keys= %d\n", data->num_key);
 
 	data->keycodes = data->pdata->keycodes;
-#if 0
+#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 	for (i = 0; i < data->num_key; i++)
 		dev_info(&client->dev, "keycode[%d]= %3d\n", i,
 			data->keycodes[i]);
@@ -1761,6 +1759,9 @@ static int __devinit tc360_probe(struct i2c_client *client,
 	set_bit(EV_ABS, input_dev->evbit);
 	set_bit(EV_LED, input_dev->evbit);
 	set_bit(LED_MISC, input_dev->ledbit);
+
+	atomic_set(&data->touchkey_enable, 1);
+
 	for (i = 0; i < data->num_key; i++) {
 		input_set_capability(input_dev, EV_KEY, data->keycodes[i]);
 		set_bit(data->keycodes[i], input_dev->keybit);
@@ -1828,16 +1829,9 @@ static int __devinit tc360_probe(struct i2c_client *client,
 		break;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	data->early_suspend.suspend = tc360_early_suspend;
-	data->early_suspend.resume = tc360_late_resume;
-	register_early_suspend(&data->early_suspend);
-#endif
-
-#ifdef CONFIG_GENERIC_BLN
-	bln_tc360_data = data;
-	register_bln_implementation(&tc360_touchkey_bln);
+#ifdef CONFIG_FB
+	data->fb_notif.notifier_call = fb_notifier_callback;
+	fb_register_client(&data->fb_notif);
 #endif
 
 	data->led_wq = create_singlethread_workqueue(client->name);
@@ -1893,8 +1887,8 @@ static int __devexit tc360_remove(struct i2c_client *client)
 {
 	struct tc360_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_FB
+	fb_unregister_client(&data->fb_notif);
 #endif
 	free_irq(client->irq, data);
 	gpio_free(data->pdata->gpio_int);
@@ -1910,7 +1904,7 @@ static int __devexit tc360_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_PM
 static int tc360_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1961,7 +1955,6 @@ static int tc360_suspend(struct device *dev)
 		gpio_tlmm_config(GPIO_CFG(102, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), 1);
 	#endif
-
 	} else if (data->suspend_type == TC360_SUSPEND_WITH_SLEEP_CMD) {
 		ret = i2c_smbus_write_byte_data(client, TC360_CMD,
 						TC360_CMD_SLEEP);
@@ -2009,7 +2002,6 @@ static int tc360_resume(struct device *dev)
 		gpio_tlmm_config(GPIO_CFG(102, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);
 	#endif
-
 		data->pdata->power(true);
 		msleep(TC360_POWERON_DELAY);
 	} else if (data->suspend_type == TC360_SUSPEND_WITH_SLEEP_CMD) {
@@ -2030,26 +2022,35 @@ out:
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void tc360_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
 {
-	struct tc360_data *data;
-	data = container_of(h, struct tc360_data, early_suspend);
-	tc360_suspend(&data->client->dev);
-}
+	struct fb_event *evdata = data;
+	int *blank;
+	struct tc360_data *tc360_tk_data =
+		container_of(self, struct tc360_data, fb_notif);
 
-static void tc360_late_resume(struct early_suspend *h)
-{
-	struct tc360_data *data;
-	data = container_of(h, struct tc360_data, early_suspend);
-	tc360_resume(&data->client->dev);
+	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+		tc360_tk_data && tc360_tk_data->client) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_UNBLANK)
+			tc360_resume(&tc360_tk_data->input_dev->dev);
+		else if (*blank == FB_BLANK_POWERDOWN)
+			tc360_suspend(&tc360_tk_data->input_dev->dev);
+	}
+
+	return 0;
 }
 #endif
 
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+#if (!defined(CONFIG_FB) && !defined(CONFIG_HAS_EARLYSUSPEND))
 static const struct dev_pm_ops tc360_pm_ops = {
 	.suspend	= tc360_suspend,
 	.resume		= tc360_resume,
+};
+#else
+static const struct dev_pm_ops tc360_pm_ops = {
 };
 #endif
 

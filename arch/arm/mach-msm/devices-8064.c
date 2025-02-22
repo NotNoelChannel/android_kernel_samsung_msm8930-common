@@ -1424,26 +1424,26 @@ static struct msm_bus_vectors vidc_venc_1080p_turbo_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_VIDEO_ENC,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab  = 222298112,
+		.ab  = 372244480,
 		.ib  = 3522000000U,
 	},
 	{
 		.src = MSM_BUS_MASTER_VIDEO_DEC,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab  = 330301440,
+		.ab  = 501219328,
 		.ib  = 3522000000U,
 	},
 	{
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 700000000,
+		.ib  = 5000000,
 	},
 	{
 		.src = MSM_BUS_MASTER_AMPSS_M0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab  = 2500000,
-		.ib  = 10000000,
+		.ib  = 5000000,
 	},
 };
 static struct msm_bus_vectors vidc_vdec_1080p_turbo_vectors[] = {
@@ -1777,6 +1777,30 @@ int __init apq8064_add_sdcc(unsigned int controller,
 	pdev = apq8064_sdcc_devices[controller-1];
 	pdev->dev.platform_data = plat;
 	return platform_device_register(pdev);
+}
+
+#define MSM_UIO_RMTFS_BASE	0x8FF00000
+#define MSM_UIO_RMTFS_END	(MSM_UIO_RMTFS_BASE + 0x40000)
+
+static struct resource msm_device_uio_rmtfs_rsc[] = {
+	{
+		.name	= "rmtfs",
+		.flags	= IORESOURCE_MEM,
+		.start	= MSM_UIO_RMTFS_BASE,
+		.end	= MSM_UIO_RMTFS_END - 1,
+	},
+};
+
+struct platform_device apq8064_device_uio_rmtfs = {
+	.name		= "msm_sharedmem",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(msm_device_uio_rmtfs_rsc),
+	.resource	= msm_device_uio_rmtfs_rsc,
+};
+
+int __init apq8064_add_uio()
+{
+	return platform_device_register(&apq8064_device_uio_rmtfs);
 }
 
 static struct resource resources_sps[] = {

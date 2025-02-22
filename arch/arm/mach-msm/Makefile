@@ -27,10 +27,7 @@ obj-$(CONFIG_ARCH_MSM_KRAIT) += acpuclock-krait.o
 obj-$(CONFIG_ARCH_MSM7X27) += acpuclock-7627.o clock-pll.o
 obj-$(CONFIG_ARCH_MSM_SCORPION) += pmu.o
 obj-$(CONFIG_ARCH_MSM_SCORPIONMP) += perf_event_msm_l2.o
-obj-$(CONFIG_ARCH_MSM_KRAIT) += msm-krait-l2-accessors.o
-ifdef CONFIG_HW_PERF_EVENTS
-	obj-$(CONFIG_ARCH_MSM_KRAIT) += pmu.o perf_event_msm_krait_l2.o
-endif
+obj-$(CONFIG_ARCH_MSM_KRAIT) += msm-krait-l2-accessors.o pmu.o perf_event_msm_krait_l2.o
 obj-$(CONFIG_ARCH_MSM_KRAIT) += krait-scm.o
 obj-$(CONFIG_ARCH_MSM7X27A) += pmu.o
 obj-$(CONFIG_DEBUG_FS) += perf_debug.o
@@ -130,10 +127,12 @@ obj-$(CONFIG_MSM_DSPS) += msm_dsps.o
 obj-$(CONFIG_MSM_SMD_NMEA) += smd_nmea.o
 obj-$(CONFIG_MSM_RESET_MODEM) += reset_modem.o
 obj-$(CONFIG_MSM_IPC_ROUTER_SMD_XPRT) += ipc_router_smd_xprt.o
+obj-$(CONFIG_MSM_IPC_ROUTER_HSIC_XPRT) += ipc_router_hsic_xprt.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
 obj-$(CONFIG_MSM_IPC_ROUTER) += ipc_router.o
 obj-$(CONFIG_MSM_IPC_ROUTER)+= ipc_socket.o
+obj-$(CONFIG_MSM_QMI_INTERFACE) += msm_qmi_interface.o
 obj-$(CONFIG_MSM_IPC_ROUTER_SECURITY)+= msm_ipc_router_security.o
 obj-$(CONFIG_DEBUG_FS) += smd_rpc_sym.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
@@ -276,83 +275,29 @@ obj-$(CONFIG_MACH_MSM8930_CDP) += board-8930-all.o board-8930-regulator-pm8038.o
 obj-$(CONFIG_MACH_MSM8930_MTP) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_MSM8930_FLUID) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_MSM8930_EVT) += board-8930-all.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-####### SS Prject ADDED #######
-obj-$(CONFIG_MACH_EXPRESS2) += board-express2.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-express2-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o
-obj-$(CONFIG_MACH_EXPRESS) += board-express.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-express-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o
-obj-$(CONFIG_MACH_HIGGS) += board-higgs.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-higgs-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mms.o
-obj-$(CONFIG_MACH_SERRANO) += board-serrano.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-serrano-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey-serrano.o
-obj-$(CONFIG_MACH_CRATER) += board-crater.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-crater-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o
-obj-$(CONFIG_MACH_BAFFIN) += board-baffin.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-baffin-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o
-obj-$(CONFIG_MACH_JASPER2) += board-jasper2.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-jasper2-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-ifdef CONFIG_MACH_CRATER_CHN_CTC
-obj-$(CONFIG_MACH_MELIUS) += board-melius.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-melius-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-else
-obj-$(CONFIG_MACH_MELIUS) += board-melius.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-melius-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o board-s5000-tsp.o
-endif
-obj-$(CONFIG_MACH_KS02) += board-ks02.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-ks02-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-ks02-8930-regulator-pm8917.o board-ks02-input-mxt.o board-8930-input-tkey.o board-ks02-wlan.o board-ks02-battery.o
-obj-$(CONFIG_MACH_GOLDEN) += board-golden.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-golden-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey.o
-ifdef CONFIG_MACH_LT02_CHN_CTC
-obj-$(CONFIG_MACH_LT02) += board-lt02.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-lt02-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-zinitix.o board-lt02ctc-battery.o
-else
-obj-$(CONFIG_MACH_LT02) += board-lt02.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-lt02-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-zinitix.o board-lt02-battery.o
-endif
-obj-$(CONFIG_MACH_BISCOTTO) += board-biscotto.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-biscotto-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-biscotto-battery.o
+obj-$(CONFIG_MACH_MELIUS) += board-melius.o board-melius-battery.o board-s5000-tsp_msm8930.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-melius-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
 obj-$(CONFIG_MACH_CANE) += board-cane.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-cane-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-obj-$(CONFIG_MACH_LOGANRE) += board-loganre.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-loganre-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o
-#######   END           #######
-ifdef CONFIG_TOUCHSCREEN_MMS136
-	obj-$(CONFIG_MACH_JASPER2) += board-8930-input-mms.o
-else
-	obj-$(CONFIG_MACH_JASPER2) += board-8930-input-zinitix.o
-endif
-ifdef CONFIG_MACH_MELIUS
-	obj-$(CONFIG_MFD_MAX77693) += board-melius-battery.o
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
-endif
+obj-$(CONFIG_MACH_SERRANO) += board-serrano.o board-8930-camera.o board-8930-camera-power.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-serrano-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o board-8930-input-tkey-serrano.o
+obj-$(CONFIG_MACH_GOLDEN) += board-golden.o board-8930-camera.o board-8930-camera-power.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-golden-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o board-8930-input-mxt.o  board-8930-input-tkey.o
+obj-$(CONFIG_MACH_LT02) += board-lt02.o board-8930-camera-power.o board-8930-camera.o board-8930-display.o board-8930-pmic.o board-8930-storage.o board-lt02-gpiomux.o devices-8930.o board-8930-gpu.o board-8930-regulator-pm8038.o board-8930-regulator-pm8917.o  board-8930-input-zinitix.o board-lt02-battery.o
 ifdef CONFIG_MACH_SERRANO
-	obj-$(CONFIG_CHARGER_MAX77XXX) += board-serrano-battery.o
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-serrano.o
-endif
-ifdef CONFIG_MACH_CRATER
-	obj-$(CONFIG_CHARGER_SMB358) += board-crater-battery.o	
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-crater.o
-endif
-ifdef CONFIG_MACH_BAFFIN
-	obj-$(CONFIG_CHARGER_SMB358) += board-baffin-battery.o	
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-baffin.o
-endif
-ifdef CONFIG_MACH_EXPRESS
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express.o
-endif
-ifdef CONFIG_MACH_EXPRESS2
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
-endif
-ifdef CONFIG_MACH_HIGGS
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
-	obj-$(CONFIG_CHARGER_SMB347) += board-higgs-battery.o
-endif
-ifdef CONFIG_MACH_JASPER2
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
+obj-$(CONFIG_CHARGER_MAX77XXX) += board-serrano-battery.o
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata-serrano.o
 endif
 ifdef CONFIG_MACH_GOLDEN
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
-	obj-$(CONFIG_CHARGER_SMB358) += board-golden-battery.o
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata-express2.o
+obj-$(CONFIG_CHARGER_SMB358) += board-golden-battery.o
 endif
+obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X) +=board-touch-cyttsp4_core.o
 ifdef CONFIG_MACH_CANE
-	obj-$(CONFIG_CHARGER_MAX77XXX) += board-cane-battery.o
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-cane.o bms-batterydata-cane2.o
-endif
-ifdef CONFIG_MACH_LOGANRE
-	obj-$(CONFIG_CHARGER_MAX77XXX) += board-loganre-battery.o
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-loganre.o
+obj-$(CONFIG_CHARGER_MAX77XXX) += board-cane-battery.o
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata-cane.o bms-batterydata-cane2.o
 endif
 ifdef CONFIG_MACH_WILCOX_EUR_LTE
-	obj-$(CONFIG_CHARGER_MAX77XXX) += board-wilcox-battery.o
-	obj-$(CONFIG_PM8921_BMS) += bms-batterydata-wilcox.o
+obj-$(CONFIG_CHARGER_MAX77XXX) += board-wilcox-battery.o
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata-wilcox.o
 endif
-
-obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X)	+=board-touch-cyttsp4_core.o
-obj-$(CONFIG_PM8921_BMS) += batterydata-lib.o bms-batterydata.o bms-batterydata-desay.o batterydata-lib.o
+obj-$(CONFIG_PM8921_BMS) += bms-batterydata.o bms-batterydata-desay.o batterydata-lib.o
 obj-$(CONFIG_MACH_APQ8064_CDP) += board-8064-all.o board-8064-regulator.o
 obj-$(CONFIG_MACH_APQ8064_MTP) += board-8064-all.o board-8064-regulator.o
 obj-$(CONFIG_MACH_APQ8064_LIQUID) += board-8064-all.o board-8064-regulator.o
@@ -372,7 +317,6 @@ obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire.o board-sapphire-gpio.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-keypad.o board-sapphire-panel.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-rfkill.o msm_vibrator.o
-obj-$(CONFIG_GSM_MODEM_SPRD6500) += board-melius-spi.o board-melius-td-modems.o
 
 obj-$(CONFIG_MACH_LGE) += lge/
 
@@ -404,7 +348,6 @@ obj-$(CONFIG_MSM_RPM_LOG) += rpm_log.o
 obj-$(CONFIG_MSM_TZ_LOG) += tz_log.o
 obj-$(CONFIG_MSM_XO) += msm_xo.o
 obj-$(CONFIG_MSM_BUS_SCALING) += msm_bus/
-obj-$(CONFIG_MSM_BUSPM_DEV) += msm-buspm-dev.o
 
 obj-$(CONFIG_MSM_IOMMU)		+= devices-iommu.o iommu_domains.o
 obj-$(CONFIG_MSM_EVENT_TIMER)		+= event_timer.o
@@ -443,7 +386,7 @@ obj-$(CONFIG_MACH_MSM7X27_FFA) += board-msm7627-regulator.o
 obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30-regulator.o
 obj-$(CONFIG_ARCH_MSM7X27A) += board-msm7x27a-regulator.o
 endif
-obj-$(CONFIG_SEC_DEBUG) += sec_debug.o sec_gaf.o sec_getlog.o
+
 obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
@@ -454,9 +397,17 @@ obj-$(CONFIG_MSM_HSIC_SYSMON) += hsic_sysmon.o
 obj-$(CONFIG_MSM_HSIC_SYSMON_TEST) += hsic_sysmon_test.o
 
 obj-$(CONFIG_MSM_RPM_SMD) += rpm-smd.o
-obj-$(CONFIG_MFD_MAX77693) += sec-switch.o
 obj-$(CONFIG_MSM_CPR) += msm_cpr.o
 obj-$(CONFIG_MSM_VP_REGULATOR) += msm_vp.o
+
+ifdef CONFIG_SEC_PRODUCT_8930
+obj-$(CONFIG_MACH_MELIUS) += sec-switch_msm8930.o
+obj-$(CONFIG_MACH_SERRANO_ATT) += sec-switch_serrano.o
+obj-$(CONFIG_MACH_SERRANO_USC) += sec-switch_serrano.o
+obj-$(CONFIG_MACH_SERRANO_SPR) += sec-switch_serrano.o
+obj-$(CONFIG_MACH_SERRANO_VZW) += sec-switch_serrano.o
+obj-$(CONFIG_MACH_SERRANO_LRA) += sec-switch_serrano.o
+endif
 
 obj-$(CONFIG_MSM_USE_USER_ACCESSIBLE_TIMERS) += timer_page.o
 
@@ -464,17 +415,16 @@ ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
-
-obj-$(CONFIG_BT_BCM4334) += board-bluetooth-bcm4334.o
-
+obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 
 obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
 obj-$(CONFIG_ARCH_RANDOM) += early_random.o
 
-obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
-
 ifdef CONFIG_SEC_THERMISTOR
-obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o msm8930-thermistor.o
+obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o
+obj-$(CONFIG_MACH_MELIUS) += msm8930-thermistor.o
+obj-$(CONFIG_MACH_CANE) += msm8930-thermistor.o
+obj-$(CONFIG_MACH_SERRANO) += msm8930-thermistor.o
+obj-$(CONFIG_MACH_LT02) += msm8930-thermistor.o
+obj-$(CONFIG_MACH_GOLDEN) += msm8930-thermistor.o
 endif
-obj-$(CONFIG_ARCH_RANDOM) += early_random.o
-obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o

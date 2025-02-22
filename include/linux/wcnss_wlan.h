@@ -37,6 +37,7 @@ enum {
 #define WLAN_MAC_ADDR_SIZE (6)
 
 struct device *wcnss_wlan_get_device(void);
+void wcnss_get_monotonic_boottime(struct timespec *ts);
 struct resource *wcnss_wlan_get_memory_map(struct device *dev);
 int wcnss_wlan_get_dxe_tx_irq(struct device *dev);
 int wcnss_wlan_get_dxe_rx_irq(struct device *dev);
@@ -62,9 +63,7 @@ void wcnss_allow_suspend(void);
 void wcnss_prevent_suspend(void);
 void wcnss_ssr_boot_notify(void);
 void wcnss_reset_intr(void);
-int wcnss_cold_boot_done(void);
 void wcnss_riva_dump_pmic_regs(void);
-void* wcnss_get_prealloc_mac_context(void);
 void *wcnss_prealloc_get(unsigned int size);
 int wcnss_prealloc_put(void *ptr);
 int wcnss_device_ready(void);

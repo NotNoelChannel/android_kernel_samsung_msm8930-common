@@ -139,7 +139,6 @@ static inline int pm_qos_get_value(struct pm_qos_constraints *c)
 	default:
 		/* runtime check for not using enum */
 		BUG();
-		return PM_QOS_DEFAULT_VALUE;
 	}
 }
 
@@ -497,7 +496,7 @@ static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
 		} else {
 			ascii_value[count] = '\0';
 		}
-		ret = strict_strtoul(ascii_value, 16, &ulval);
+		ret = kstrtoul(ascii_value, 16, &ulval);
 		if (ret) {
 			pr_debug("%s, 0x%lx, 0x%x\n", ascii_value, ulval, ret);
 			return -EINVAL;

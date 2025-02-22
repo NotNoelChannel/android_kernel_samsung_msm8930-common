@@ -12,10 +12,12 @@
 
 static u32 net_secret[MD5_MESSAGE_BYTES / 4] ____cacheline_aligned;
 
-void net_secret_init(void)
+static int __init net_secret_init(void)
 {
 	get_random_bytes(net_secret, sizeof(net_secret));
+	return 0;
 }
+late_initcall(net_secret_init);
 
 #ifdef CONFIG_INET
 static u32 seq_scale(u32 seq)
@@ -74,6 +76,7 @@ u32 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,
 
 	return hash[0];
 }
+EXPORT_SYMBOL(secure_ipv6_port_ephemeral);
 #endif
 
 #ifdef CONFIG_INET

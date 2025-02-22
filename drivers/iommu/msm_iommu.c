@@ -1,4 +1,5 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.  *
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -47,9 +48,6 @@ __asm__ __volatile__ (							\
 #define MSM_IOMMU_ATTR_CACHED_WB_WA	0x1
 #define MSM_IOMMU_ATTR_CACHED_WB_NWA	0x2
 #define MSM_IOMMU_ATTR_CACHED_WT	0x3
-
-static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
-				 unsigned int len);
 
 static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 				 unsigned int len);
